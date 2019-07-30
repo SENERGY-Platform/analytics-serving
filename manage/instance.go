@@ -21,8 +21,7 @@ import (
 	"analytics-serving/lib"
 	"analytics-serving/model"
 	"analytics-serving/rancher-api"
-	"log"
-
+	rancher2_api "analytics-serving/rancher2-api"
 	"fmt"
 
 	"strings"
@@ -58,7 +57,13 @@ func CreateInstance(req lib.ServingRequest, userId string) {
 	}
 	instance.Values = values
 	dataFields = dataFields + "}"
-	instance.RancherServiceId = rancher().CreateInstance(&instance, dataFields)
+
+	if lib.GetEnv("DRIVER", "rancher") == "rancher2" {
+		instance.RancherServiceId = rancher2().CreateInstance(&instance, dataFields)
+	} else {
+		instance.RancherServiceId = rancher().CreateInstance(&instance, dataFields)
+	}
+
 	db.DB.NewRecord(instance)
 	db.DB.Create(&instance)
 }
@@ -93,18 +98,25 @@ func GetInstances(id string, args map[string][]string) (instances model.Instance
 func DeleteInstance(id string) bool {
 	instance := model.Instance{}
 	db.DB.Where("id = ?", id).First(&instance)
-	rancher().DeleteInstance(instance.RancherServiceId)
+	if lib.GetEnv("DRIVER", "rancher") == "rancher2" {
+		e := rancher2().DeleteInstance(instance.ID.String())
+		if e != nil {
+			fmt.Println(e)
+		}
+	} else {
+		rancher().DeleteInstance(instance.RancherServiceId)
+	}
 	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr:     lib.GetEnv("INFLUX_DB_HOST", ""),
 		Username: lib.GetEnv("INFLUX_DB_USERNAME", ""),
 		Password: lib.GetEnv("INFLUX_DB_PASSWORD", ""),
 	})
 	if err != nil {
-		log.Fatal("Could not connect to InfluxDB")
+		fmt.Println("could not connect to InfluxDB")
 	}
-	_, errInflux := queryInfluxDB(c, fmt.Sprintf("DROP MEASUREMENT %s", `"`+instance.Measurement+`"`), instance.Database)
-	if errInflux != nil {
-		log.Fatal("Influx Error: ", errInflux)
+	_, err = queryInfluxDB(c, fmt.Sprintf("DROP MEASUREMENT %s", `"`+instance.Measurement+`"`), instance.Database)
+	if err != nil {
+		fmt.Println("influx Error: ", err)
 	}
 	db.DB.Delete(&instance)
 	return true
@@ -113,6 +125,11 @@ func DeleteInstance(id string) bool {
 func rancher() (RANCHER *rancher_api.Rancher) {
 	rancher_api.Init()
 	return rancher_api.RANCHER
+}
+
+func rancher2() (RANCHER2 *rancher2_api.Rancher2) {
+	rancher2_api.Init()
+	return rancher2_api.RANCHER2
 }
 
 func queryInfluxDB(clnt client.Client, cmd string, db string) (res []client.Result, err error) {

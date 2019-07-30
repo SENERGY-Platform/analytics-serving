@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package rancher2
+package rancher2_api
 
 import (
 	"analytics-serving/lib"
@@ -35,8 +35,8 @@ func Init() {
 		lib.GetEnv("RANCHER2_ENDPOINT", ""),
 		lib.GetEnv("RANCHER2_ACCESS_KEY", ""),
 		lib.GetEnv("RANCHER2_SECRET_KEY", ""),
-		lib.GetEnv("RANCHER2_PROJECT_ID", ""),
 		lib.GetEnv("RANCHER2_NAMESPACE_ID", ""),
+		lib.GetEnv("RANCHER2_PROJECT_ID", ""),
 	)
 	RANCHER2 = r
 }
@@ -74,11 +74,11 @@ func (r *Rancher2) CreateInstance(instance *model.Instance, dataFields string) s
 
 	request := gorequest.New().SetBasicAuth(r.accessKey, r.secretKey).TLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	reqBody := &Request{
-		Name:        "kafka-influx-" + instance.ID.String(),
+		Name:        r.getInstanceName(instance.ID.String()),
 		NamespaceId: r.namespaceId,
 		Containers: []Container{{
 			Image:       lib.GetEnv("TRANSFER_IMAGE", "fgseitsrancher.wifa.intern.uni-leipzig.de:5000/kafka-influx:unstable"),
-			Name:        r.getInstanceName(instance.ID.String()),
+			Name:        "kafka2influx",
 			Environment: env,
 		}},
 		Labels:   map[string]string{"exportId": instance.ID.String()},
@@ -94,10 +94,10 @@ func (r *Rancher2) CreateInstance(instance *model.Instance, dataFields string) s
 	return ""
 }
 
-func (r *Rancher2) DeleteOperator(serviceId string) (err error) {
+func (r *Rancher2) DeleteInstance(id string) (err error) {
 	request := gorequest.New().SetBasicAuth(r.accessKey, r.secretKey).TLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	resp, body, e := request.Delete(r.url + "projects/" + r.projectId + "/workloads/deployment:" +
-		r.namespaceId + ":" + serviceId).End()
+		r.namespaceId + ":" + r.getInstanceName(id)).End()
 	if resp.StatusCode != http.StatusNoContent {
 		err = errors.New("could not delete export: " + body)
 		return
