@@ -59,9 +59,9 @@ func (r Rancher) CreateInstance(instance *model.Instance, dataFields string) str
 		"DATA_TIME_MAPPING":   instance.TimePath,
 		"DATA_FILTER_ID":      instance.Filter,
 		"INFLUX_DB":           instance.Database,
-		"INFLUX_HOST":         "influxdb",
-		"INFLUX_USER":         "root",
-		"INFLUX_PW":           "",
+		"INFLUX_HOST":         lib.GetEnv("INFLUX_DB_HOST", "influxdb"),
+		"INFLUX_USER":         lib.GetEnv("INFLUX_DB_USER", "root"),
+		"INFLUX_PW":           lib.GetEnv("INFLUX_DB_PASSWORD", ""),
 	}
 
 	if instance.FilterType == "pipeId" {
@@ -81,7 +81,8 @@ func (r Rancher) CreateInstance(instance *model.Instance, dataFields string) str
 		Scale:         1,
 		StartOnCreate: true,
 		LaunchConfig: LaunchConfig{
-			ImageUuid:   "docker:fgseitsrancher.wifa.intern.uni-leipzig.de:5000/kafka-influx:unstable",
+			ImageUuid: "docker:" + lib.GetEnv("TRANSFER_IMAGE",
+				"fgseitsrancher.wifa.intern.uni-leipzig.de:5000/kafka-influx:unstable"),
 			Environment: env,
 			Labels:      labels,
 		},
