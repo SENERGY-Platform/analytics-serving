@@ -64,6 +64,7 @@ func (r *Rancher2) CreateInstance(instance *model.Instance, dataFields string) s
 		"DATA_FILTER_ID":      instance.Filter,
 		"INFLUX_DB":           instance.Database,
 		"INFLUX_HOST":         lib.GetEnv("INFLUX_DB_HOST", "influxdb"),
+		"INFLUX_PORT":         lib.GetEnv("INFLUX_DB_PORT", "8086"),
 		"INFLUX_USER":         lib.GetEnv("INFLUX_DB_USER", "root"),
 		"INFLUX_PW":           lib.GetEnv("INFLUX_DB_PASSWORD", ""),
 	}

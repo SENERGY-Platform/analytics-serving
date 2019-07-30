@@ -107,7 +107,7 @@ func DeleteInstance(id string) bool {
 		rancher().DeleteInstance(instance.RancherServiceId)
 	}
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     lib.GetEnv("INFLUX_DB_HOST", "") + ":" + lib.GetEnv("INFLUX_DB_PORT", "8086"),
+		Addr:     "http://" + lib.GetEnv("INFLUX_DB_HOST", "") + ":" + lib.GetEnv("INFLUX_DB_PORT", "8086"),
 		Username: lib.GetEnv("INFLUX_DB_USERNAME", "root"),
 		Password: lib.GetEnv("INFLUX_DB_PASSWORD", ""),
 	})
