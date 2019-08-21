@@ -1,13 +1,12 @@
-FROM golang
-
-RUN go get -u github.com/golang/dep/cmd/dep
+FROM golang:1.12
 
 COPY . /go/src/analytics-serving
 WORKDIR /go/src/analytics-serving
 
-RUN dep ensure
+ENV GO111MODULE=on
+
 RUN go build
 
-EXPOSE 5001
+EXPOSE 8000
 
 CMD ./analytics-serving
