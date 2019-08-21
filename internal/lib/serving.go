@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 InfAI (CC SES)
+ * Copyright 2019 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,29 @@
  * limitations under the License.
  */
 
-package manage
+package lib
 
 import (
-	"analytics-serving/db"
-	"analytics-serving/lib"
-	"analytics-serving/model"
-	"analytics-serving/rancher-api"
-	rancher2_api "analytics-serving/rancher2-api"
 	"fmt"
 
-	"strings"
+	influxClient "github.com/influxdata/influxdb/client/v2"
 
-	"github.com/influxdata/influxdb/client/v2"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
+
+	"strings"
 )
 
-func CreateInstance(req lib.ServingRequest, userId string) {
+type Serving struct {
+	driver Driver
+}
+
+func NewServing(driver Driver) *Serving {
+	return &Serving{driver}
+}
+
+func (f *Serving) CreateInstance(req ServingRequest, userId string) {
 	id := uuid.NewV4()
-	instance := model.Instance{
+	instance := Instance{
 		ID:          id,
 		Measurement: id.String(),
 		Name:        req.Name,
@@ -47,9 +51,9 @@ func CreateInstance(req lib.ServingRequest, userId string) {
 		TimePath:    req.TimePath,
 	}
 	dataFields := "{"
-	var values []model.Value
+	var values []Value
 	for index, value := range req.Values {
-		values = append(values, model.Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path})
+		values = append(values, Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path})
 		dataFields = dataFields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
 		if index+1 < len(req.Values) {
 			dataFields = dataFields + ","
@@ -58,23 +62,19 @@ func CreateInstance(req lib.ServingRequest, userId string) {
 	instance.Values = values
 	dataFields = dataFields + "}"
 
-	if lib.GetEnv("DRIVER", "rancher") == "rancher2" {
-		instance.RancherServiceId = rancher2().CreateInstance(&instance, dataFields)
-	} else {
-		instance.RancherServiceId = rancher().CreateInstance(&instance, dataFields)
-	}
+	instance.RancherServiceId = f.driver.CreateInstance(&instance, dataFields)
 
-	db.DB.NewRecord(instance)
-	db.DB.Create(&instance)
+	DB.NewRecord(instance)
+	DB.Create(&instance)
 }
 
-func GetInstance(id string) (instance model.Instance) {
-	db.DB.Where("id = ?", id).Preload("Values").First(&instance)
+func (f *Serving) GetInstance(id string) (instance Instance) {
+	DB.Where("id = ?", id).Preload("Values").First(&instance)
 	return
 }
 
-func GetInstances(id string, args map[string][]string) (instances model.Instances) {
-	tx := db.DB.Where("user_id = ?", id)
+func (f *Serving) GetInstances(id string, args map[string][]string) (instances Instances) {
+	tx := DB.Where("user_id = ?", id)
 	for arg, value := range args {
 		if arg == "limit" {
 			tx = tx.Limit(value[0])
@@ -94,21 +94,24 @@ func GetInstances(id string, args map[string][]string) (instances model.Instance
 	return
 }
 
-func DeleteInstance(id string) bool {
-	instance := model.Instance{}
-	db.DB.Where("id = ?", id).First(&instance)
-	if lib.GetEnv("DRIVER", "rancher") == "rancher2" {
-		e := rancher2().DeleteInstance(instance.ID.String())
+func (f *Serving) DeleteInstance(id string) bool {
+	instance := Instance{}
+	DB.Where("id = ?", id).First(&instance)
+	if GetEnv("DRIVER", "rancher") == "rancher2" {
+		e := f.driver.DeleteInstance(instance.ID.String())
 		if e != nil {
 			fmt.Println(e)
 		}
 	} else {
-		rancher().DeleteInstance(instance.RancherServiceId)
+		e := f.driver.DeleteInstance(instance.RancherServiceId)
+		if e != nil {
+			fmt.Println(e)
+		}
 	}
-	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     "http://" + lib.GetEnv("INFLUX_DB_HOST", "") + ":" + lib.GetEnv("INFLUX_DB_PORT", "8086"),
-		Username: lib.GetEnv("INFLUX_DB_USERNAME", "root"),
-		Password: lib.GetEnv("INFLUX_DB_PASSWORD", ""),
+	c, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
+		Addr:     "http://" + GetEnv("INFLUX_DB_HOST", "") + ":" + GetEnv("INFLUX_DB_PORT", "8086"),
+		Username: GetEnv("INFLUX_DB_USERNAME", "root"),
+		Password: GetEnv("INFLUX_DB_PASSWORD", ""),
 	})
 	if err != nil {
 		fmt.Println("could not connect to InfluxDB")
@@ -117,22 +120,12 @@ func DeleteInstance(id string) bool {
 	if err != nil {
 		fmt.Println("influx Error: ", err)
 	}
-	db.DB.Delete(&instance)
+	DB.Delete(&instance)
 	return true
 }
 
-func rancher() (RANCHER *rancher_api.Rancher) {
-	rancher_api.Init()
-	return rancher_api.RANCHER
-}
-
-func rancher2() (RANCHER2 *rancher2_api.Rancher2) {
-	rancher2_api.Init()
-	return rancher2_api.RANCHER2
-}
-
-func queryInfluxDB(clnt client.Client, cmd string, db string) (res []client.Result, err error) {
-	q := client.Query{
+func queryInfluxDB(clnt influxClient.Client, cmd string, db string) (res []influxClient.Result, err error) {
+	q := influxClient.Query{
 		Command:  cmd,
 		Database: db,
 	}

@@ -17,8 +17,7 @@
 package rancher2_api
 
 import (
-	"analytics-serving/lib"
-	"analytics-serving/model"
+	"analytics-serving/internal/lib"
 	"errors"
 	"fmt"
 	"net/http"
@@ -27,19 +26,6 @@ import (
 
 	"github.com/parnurzeal/gorequest"
 )
-
-var RANCHER2 *Rancher2
-
-func Init() {
-	r := NewRancher2(
-		lib.GetEnv("RANCHER2_ENDPOINT", ""),
-		lib.GetEnv("RANCHER2_ACCESS_KEY", ""),
-		lib.GetEnv("RANCHER2_SECRET_KEY", ""),
-		lib.GetEnv("RANCHER2_NAMESPACE_ID", ""),
-		lib.GetEnv("RANCHER2_PROJECT_ID", ""),
-	)
-	RANCHER2 = r
-}
 
 type Rancher2 struct {
 	url         string
@@ -53,7 +39,7 @@ func NewRancher2(url string, accessKey string, secretKey string, namespaceId str
 	return &Rancher2{url, accessKey, secretKey, namespaceId, projectId}
 }
 
-func (r *Rancher2) CreateInstance(instance *model.Instance, dataFields string) string {
+func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) string {
 	env := map[string]string{
 		"KAFKA_GROUP_ID":      "transfer-" + instance.ID.String(),
 		"KAFKA_BOOTSTRAP":     lib.GetEnv("KAFKA_BOOTSTRAP", "broker.kafka.rancher.internal:9092"),

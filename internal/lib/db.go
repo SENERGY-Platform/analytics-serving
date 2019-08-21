@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 InfAI (CC SES)
+ * Copyright 2019 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package db
+package lib
 
 import (
-	"analytics-serving/lib"
 	"fmt"
 
 	"github.com/jinzhu/gorm"
@@ -27,10 +26,10 @@ import (
 var DB *gorm.DB
 
 func Init() {
-	connectionString := lib.GetEnv("MYSQL_USER", "") + ":" +
-		lib.GetEnv("MYSQL_PW", "") +
-		"@(" + lib.GetEnv("MYSQL_HOST", "") + ":3306)" +
-		"/" + lib.GetEnv("MYSQL_DB", "") +
+	connectionString := GetEnv("MYSQL_USER", "") + ":" +
+		GetEnv("MYSQL_PW", "") +
+		"@(" + GetEnv("MYSQL_HOST", "") + ":3306)" +
+		"/" + GetEnv("MYSQL_DB", "") +
 		"?charset=utf8&parseTime=True&loc=Local"
 	fmt.Println("Connecting to: " + connectionString)
 	db, err := gorm.Open("mysql", connectionString)

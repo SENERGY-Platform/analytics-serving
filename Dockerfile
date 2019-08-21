@@ -5,7 +5,7 @@ WORKDIR /go/src/analytics-serving
 
 ENV GO111MODULE=on
 
-RUN go build
+RUN make build
 
 EXPOSE 8000
 

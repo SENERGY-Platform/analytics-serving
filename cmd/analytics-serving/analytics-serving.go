@@ -14,7 +14,24 @@
  * limitations under the License.
  */
 
-package lib
+package main
 
-type Driver interface {
+import (
+	"analytics-serving/internal/api"
+	"analytics-serving/internal/lib"
+	"log"
+
+	"github.com/joho/godotenv"
+)
+
+func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Print("Error loading .env file")
+	}
+	lib.Init()
+	defer lib.Close()
+	m := lib.NewMigration(lib.GetDB())
+	m.Migrate()
+	api.CreateServer()
 }

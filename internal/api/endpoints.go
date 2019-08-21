@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 InfAI (CC SES)
+ * Copyright 2019 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,10 @@
 package api
 
 import (
-	"analytics-serving/lib"
+	"analytics-serving/internal/lib"
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"analytics-serving/manage"
 
 	"strings"
 
@@ -30,10 +28,12 @@ import (
 )
 
 type Endpoint struct {
+	serving *lib.Serving
 }
 
-func NewEndpoint() *Endpoint {
-	return &Endpoint{}
+func NewEndpoint(driver lib.Driver) *Endpoint {
+	ret := lib.NewServing(driver)
+	return &Endpoint{ret}
 }
 
 func (e *Endpoint) getRootEndpoint(w http.ResponseWriter, req *http.Request) {
@@ -55,7 +55,7 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 	}
 	userId = strings.Replace(userId, "\"", "", -1)
 	defer req.Body.Close()
-	manage.CreateInstance(servingReq, userId)
+	e.serving.CreateInstance(servingReq, userId)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	json.NewEncoder(w).Encode(lib.Response{"OK"})
@@ -65,7 +65,7 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(manage.GetInstance(vars["id"]))
+	json.NewEncoder(w).Encode(e.serving.GetInstance(vars["id"]))
 }
 
 func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request) {
@@ -77,13 +77,13 @@ func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request)
 		userId = "admin"
 	}
 	userId = strings.Replace(userId, "\"", "", -1)
-	json.NewEncoder(w).Encode(manage.GetInstances(userId, args))
+	json.NewEncoder(w).Encode(e.serving.GetInstances(userId, args))
 }
 
 func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(204)
-	manage.DeleteInstance(vars["id"])
+	e.serving.DeleteInstance(vars["id"])
 	json.NewEncoder(w).Encode(lib.Response{"OK"})
 }

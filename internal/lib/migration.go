@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 InfAI (CC SES)
+ * Copyright 2019 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,32 @@
  * limitations under the License.
  */
 
-package main
+package lib
 
 import (
-	"analytics-serving/api"
-	"log"
+	"fmt"
 
-	"analytics-serving/db"
-
-	"analytics-serving/model"
-
-	"github.com/joho/godotenv"
+	"github.com/jinzhu/gorm"
 )
 
-func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Print("Error loading .env file")
+type Migration struct {
+	db *gorm.DB
+}
+
+func NewMigration(db *gorm.DB) *Migration {
+	return &Migration{db}
+}
+
+func (m *Migration) Migrate() {
+	if !DB.HasTable("instances") {
+		fmt.Println("Creating instances table.")
+		DB.CreateTable(&Instance{})
 	}
-	db.Init()
-	defer db.Close()
-	m := model.NewMigration(db.GetDB())
-	m.Migrate()
-	api.CreateServer()
+	DB.AutoMigrate(&Instance{})
+	if !DB.HasTable("values") {
+		fmt.Println("Creating values table.")
+		DB.CreateTable(&Value{})
+	}
+	DB.AutoMigrate(&Value{})
+	DB.Model(&Value{}).AddForeignKey("instance_id", "instances(id)", "CASCADE", "CASCADE")
 }

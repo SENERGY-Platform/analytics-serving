@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 InfAI (CC SES)
+ * Copyright 2019 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,7 @@
 
 package lib
 
-import (
-	"encoding/json"
-	"os"
-)
-
-func GetEnv(key, fallback string) string {
-	value := os.Getenv(key)
-	if len(value) == 0 {
-		return fallback
-	}
-	return value
-}
-
-func ToJson(resp string) map[string]interface{} {
-	data := map[string]interface{}{}
-	json.Unmarshal([]byte(resp), &data)
-	return data
+type Driver interface {
+	CreateInstance(instance *Instance, dataFields string) string
+	DeleteInstance(id string) (err error)
 }

@@ -17,26 +17,13 @@
 package rancher_api
 
 import (
-	"analytics-serving/lib"
+	"analytics-serving/internal/lib"
+	"errors"
 	"fmt"
 	"net/http"
 
-	"analytics-serving/model"
-
 	"github.com/parnurzeal/gorequest"
 )
-
-var RANCHER *Rancher
-
-func Init() {
-	r := NewRancher(
-		lib.GetEnv("RANCHER_ENDPOINT", ""),
-		lib.GetEnv("RANCHER_ACCESS_KEY", ""),
-		lib.GetEnv("RANCHER_SECRET_KEY", ""),
-		lib.GetEnv("RANCHER_STACK_ID", ""),
-	)
-	RANCHER = r
-}
 
 type Rancher struct {
 	url       string
@@ -49,7 +36,7 @@ func NewRancher(url string, accessKey string, secretKey string, stackId string) 
 	return &Rancher{url, accessKey, secretKey, stackId}
 }
 
-func (r Rancher) CreateInstance(instance *model.Instance, dataFields string) string {
+func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string) string {
 	env := map[string]string{
 		"KAFKA_GROUP_ID":      "transfer-" + instance.ID.String(),
 		"KAFKA_BOOTSTRAP":     lib.GetEnv("KAFKA_BOOTSTRAP", "broker.kafka.rancher.internal:9092"),
@@ -99,8 +86,12 @@ func (r Rancher) CreateInstance(instance *model.Instance, dataFields string) str
 	return data["id"].(string)
 }
 
-func (r Rancher) DeleteInstance(serviceId string) map[string]interface{} {
+func (r Rancher) DeleteInstance(serviceId string) (err error) {
 	request := gorequest.New().SetBasicAuth(r.accessKey, r.secretKey)
-	_, body, _ := request.Delete(r.url + "services/" + serviceId).End()
-	return lib.ToJson(body)
+	_, body, e := request.Delete(r.url + "services/" + serviceId).End()
+	if len(e) > 0 {
+		err = errors.New("could not delete export: " + body)
+		return
+	}
+	return
 }
