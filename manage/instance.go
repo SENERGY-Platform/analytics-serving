@@ -70,7 +70,6 @@ func CreateInstance(req lib.ServingRequest, userId string) {
 
 func GetInstance(id string) (instance model.Instance) {
 	db.DB.Where("id = ?", id).Preload("Values").First(&instance)
-	fmt.Println(instance)
 	return
 }
 
