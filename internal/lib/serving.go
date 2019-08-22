@@ -49,6 +49,7 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) {
 		UserId:      userId,
 		Database:    userId,
 		TimePath:    req.TimePath,
+		Offset:      req.Offset,
 	}
 	dataFields := "{"
 	var values []Value

@@ -53,6 +53,7 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) str
 		"INFLUX_PORT":         lib.GetEnv("INFLUX_DB_PORT", "8086"),
 		"INFLUX_USER":         lib.GetEnv("INFLUX_DB_USER", "root"),
 		"INFLUX_PW":           lib.GetEnv("INFLUX_DB_PASSWORD", ""),
+		"OFFSET_RESET":        instance.Offset,
 	}
 
 	if instance.FilterType == "pipeId" {

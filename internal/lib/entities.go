@@ -29,6 +29,7 @@ type ServingRequest struct {
 	Description string                `json:"Description,omitempty"`
 	Topic       string                `json:"Topic,omitempty"`
 	TimePath    string                `json:"TimePath,omitempty"`
+	Offset      string                `json:"Offset,omitempty"`
 	Values      []ServingRequestValue `json:"Values,omitempty"`
 }
 
