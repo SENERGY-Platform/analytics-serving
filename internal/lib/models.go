@@ -16,7 +16,11 @@
 
 package lib
 
-import uuid "github.com/satori/go.uuid"
+import (
+	"time"
+
+	uuid "github.com/satori/go.uuid"
+)
 
 type Instances []Instance
 
@@ -35,6 +39,8 @@ type Instance struct {
 	UserId           string    `gorm:"type:varchar(255)"`
 	RancherServiceId string    `gorm:"type:varchar(255)"`
 	Values           []Value   `gorm:"foreignkey:InstanceID;association_foreignkey:ID;PRELOAD:true"`
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type Value struct {
