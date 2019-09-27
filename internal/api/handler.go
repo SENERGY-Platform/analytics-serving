@@ -32,6 +32,7 @@ func CreateServer() {
 	var driver lib.Driver
 	switch selectedDriver := lib.GetEnv("DRIVER", "rancher"); selectedDriver {
 	case "rancher":
+		fmt.Println("using rancher driver")
 		driver = rancher_api.NewRancher(
 			lib.GetEnv("RANCHER_ENDPOINT", ""),
 			lib.GetEnv("RANCHER_ACCESS_KEY", ""),
@@ -39,6 +40,7 @@ func CreateServer() {
 			lib.GetEnv("RANCHER_STACK_ID", ""),
 		)
 	case "rancher2":
+		fmt.Println("using rancher2 driver")
 		driver = rancher2_api.NewRancher2(
 			lib.GetEnv("RANCHER2_ENDPOINT", ""),
 			lib.GetEnv("RANCHER2_ACCESS_KEY", ""),
