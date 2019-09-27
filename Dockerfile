@@ -1,4 +1,4 @@
-FROM golang:1.12
+FROM golang:1.13
 
 COPY . /go/src/analytics-serving
 WORKDIR /go/src/analytics-serving
