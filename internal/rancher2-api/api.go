@@ -65,12 +65,14 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) str
 		Name:        r.getInstanceName(instance.ID.String()),
 		NamespaceId: r.namespaceId,
 		Containers: []Container{{
-			Image:       lib.GetEnv("TRANSFER_IMAGE", "fgseitsrancher.wifa.intern.uni-leipzig.de:5000/kafka-influx:unstable"),
-			Name:        "kafka2influx",
-			Environment: env,
+			Image:           lib.GetEnv("TRANSFER_IMAGE", "fgseitsrancher.wifa.intern.uni-leipzig.de:5000/kafka-influx:unstable"),
+			Name:            "kafka2influx",
+			Environment:     env,
+			ImagePullPolicy: "Always",
 		}},
-		Labels:   map[string]string{"exportId": instance.ID.String()},
-		Selector: Selector{MatchLabels: map[string]string{"exportId": instance.ID.String()}},
+		Scheduling: Scheduling{Scheduler: "default-scheduler", Node: Node{RequireAll: []string{"role=worker"}}},
+		Labels:     map[string]string{"exportId": instance.ID.String()},
+		Selector:   Selector{MatchLabels: map[string]string{"exportId": instance.ID.String()}},
 	}
 	resp, body, e := request.Post(r.url + "projects/" + r.projectId + "/workloads").Send(reqBody).End()
 	if resp.StatusCode != http.StatusCreated {

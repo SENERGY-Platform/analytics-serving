@@ -22,14 +22,25 @@ type Request struct {
 	Containers  []Container       `json:"containers,omitempty"`
 	Labels      map[string]string `json:"labels,omitempty"`
 	Selector    Selector          `json:"selector,omitempty"`
+	Scheduling  Scheduling        `json:"scheduling,omitempty"`
 }
 
 type Container struct {
-	Image       string            `json:"image,omitempty"`
-	Name        string            `json:"name,omitempty"`
-	Environment map[string]string `json:"environment,omitempty"`
+	Image           string            `json:"image,omitempty"`
+	Name            string            `json:"name,omitempty"`
+	Environment     map[string]string `json:"environment,omitempty"`
+	ImagePullPolicy string            `json:"imagePullPolicy,omitempty"`
 }
 
 type Selector struct {
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+}
+
+type Scheduling struct {
+	Node      Node   `json:"node,omitempty"`
+	Scheduler string `json:"scheduler,omitempty"`
+}
+
+type Node struct {
+	RequireAll []string `json:"requireAll,omitempty"`
 }
