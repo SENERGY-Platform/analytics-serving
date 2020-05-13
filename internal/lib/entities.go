@@ -38,3 +38,21 @@ type ServingRequestValue struct {
 	Type string `json:"Type,omitempty"`
 	Path string `json:"Path,omitempty"`
 }
+
+type Claims struct {
+	Sub         string              `json:"sub,omitempty"`
+	RealmAccess map[string][]string `json:"realm_access,omitempty"`
+}
+
+func (c Claims) Valid() error {
+	return nil
+}
+
+func (c Claims) IsAdmin() bool {
+	for _, b := range c.RealmAccess["roles"] {
+		if b == "admin" {
+			return true
+		}
+	}
+	return false
+}

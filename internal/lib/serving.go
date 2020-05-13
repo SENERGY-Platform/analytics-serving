@@ -73,8 +73,16 @@ func (f *Serving) GetInstance(id string, userId string) (instance Instance, erro
 	return
 }
 
-func (f *Serving) GetInstances(userId string, args map[string][]string) (instances Instances) {
-	tx := DB.Where("user_id = ?", userId)
+func (f *Serving) GetInstancesForUser(userId string, args map[string][]string) (instances Instances) {
+	return f.GetInstances(userId, args, false)
+}
+
+func (f *Serving) GetInstances(userId string, args map[string][]string, admin bool) (instances Instances) {
+	tx := DB.Select("*").Where("user_id = ?", userId)
+	if admin {
+		tx = DB.Select("*")
+
+	}
 	for arg, value := range args {
 		if arg == "limit" {
 			tx = tx.Limit(value[0])
@@ -94,9 +102,17 @@ func (f *Serving) GetInstances(userId string, args map[string][]string) (instanc
 	return
 }
 
-func (f *Serving) DeleteInstance(id string, userId string) (deleted bool, errors []error) {
+func (f *Serving) DeleteInstanceForUser(id string, userId string) (deleted bool, errors []error) {
+	return f.DeleteInstance(id, userId, false)
+}
+
+func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted bool, errors []error) {
 	instance := Instance{}
-	errors = DB.Where("id = ? AND user_id = ?", id, userId).First(&instance).GetErrors()
+	tx := DB.Where("id = ? AND user_id = ?", id, userId)
+	if admin {
+		tx = DB.Where("id = ?", id)
+	}
+	errors = tx.First(&instance).GetErrors()
 	if len(errors) > 0 {
 		return false, errors
 	}
