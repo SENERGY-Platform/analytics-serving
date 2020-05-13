@@ -58,8 +58,16 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(e.serving.GetInstance(vars["id"], getUserId(req)))
+	instance, errors := e.serving.GetInstance(vars["id"], getUserId(req))
+	if len(errors) > 0 {
+		for _, err := range errors {
+			fmt.Println(err)
+		}
+		w.WriteHeader(404)
+	} else {
+		w.WriteHeader(200)
+		json.NewEncoder(w).Encode(instance)
+	}
 }
 
 func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request) {
@@ -71,10 +79,18 @@ func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request)
 
 func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
+	deleted, errors := e.serving.DeleteInstance(vars["id"], getUserId(req))
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(204)
-	e.serving.DeleteInstance(vars["id"], getUserId(req))
-	json.NewEncoder(w).Encode(lib.Response{"OK"})
+	if len(errors) > 0 && deleted == false {
+		w.WriteHeader(404)
+	} else if len(errors) > 0 {
+		for _, err := range errors {
+			fmt.Println(err)
+		}
+		w.WriteHeader(204)
+	} else {
+		w.WriteHeader(204)
+	}
 }
 
 func getUserId(req *http.Request) (userId string) {

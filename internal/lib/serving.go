@@ -18,7 +18,6 @@ package lib
 
 import (
 	"fmt"
-
 	influxClient "github.com/influxdata/influxdb/client/v2"
 
 	uuid "github.com/satori/go.uuid"
@@ -69,8 +68,8 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) {
 	DB.Create(&instance)
 }
 
-func (f *Serving) GetInstance(id string, userId string) (instance Instance) {
-	DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance)
+func (f *Serving) GetInstance(id string, userId string) (instance Instance, errors []error) {
+	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance).GetErrors()
 	return
 }
 
@@ -95,18 +94,21 @@ func (f *Serving) GetInstances(userId string, args map[string][]string) (instanc
 	return
 }
 
-func (f *Serving) DeleteInstance(id string, userId string) bool {
+func (f *Serving) DeleteInstance(id string, userId string) (deleted bool, errors []error) {
 	instance := Instance{}
-	DB.Where("id = ? AND user_id = ?", id, userId).First(&instance)
+	errors = DB.Where("id = ? AND user_id = ?", id, userId).First(&instance).GetErrors()
+	if len(errors) > 0 {
+		return false, errors
+	}
 	if GetEnv("DRIVER", "rancher") == "rancher2" {
 		e := f.driver.DeleteInstance(instance.ID.String())
 		if e != nil {
-			fmt.Println(e)
+			errors = append(errors, e)
 		}
 	} else {
 		e := f.driver.DeleteInstance(instance.RancherServiceId)
 		if e != nil {
-			fmt.Println(e)
+			errors = append(errors, e)
 		}
 	}
 	c, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
@@ -115,14 +117,14 @@ func (f *Serving) DeleteInstance(id string, userId string) bool {
 		Password: GetEnv("INFLUX_DB_PASSWORD", ""),
 	})
 	if err != nil {
-		fmt.Println("could not connect to InfluxDB")
+		errors = append(errors, err)
 	}
 	_, err = queryInfluxDB(c, fmt.Sprintf("DROP MEASUREMENT %s", `"`+instance.Measurement+`"`), instance.Database)
 	if err != nil {
-		fmt.Println("influx Error: ", err)
+		errors = append(errors, err)
 	}
 	DB.Delete(&instance)
-	return true
+	return true, errors
 }
 
 func queryInfluxDB(clnt influxClient.Client, cmd string, db string) (res []influxClient.Result, err error) {
