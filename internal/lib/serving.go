@@ -69,13 +69,13 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) {
 	DB.Create(&instance)
 }
 
-func (f *Serving) GetInstance(id string) (instance Instance) {
-	DB.Where("id = ?", id).Preload("Values").First(&instance)
+func (f *Serving) GetInstance(id string, userId string) (instance Instance) {
+	DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance)
 	return
 }
 
-func (f *Serving) GetInstances(id string, args map[string][]string) (instances Instances) {
-	tx := DB.Where("user_id = ?", id)
+func (f *Serving) GetInstances(userId string, args map[string][]string) (instances Instances) {
+	tx := DB.Where("user_id = ?", userId)
 	for arg, value := range args {
 		if arg == "limit" {
 			tx = tx.Limit(value[0])
@@ -95,9 +95,9 @@ func (f *Serving) GetInstances(id string, args map[string][]string) (instances I
 	return
 }
 
-func (f *Serving) DeleteInstance(id string) bool {
+func (f *Serving) DeleteInstance(id string, userId string) bool {
 	instance := Instance{}
-	DB.Where("id = ?", id).First(&instance)
+	DB.Where("id = ? AND user_id = ?", id, userId).First(&instance)
 	if GetEnv("DRIVER", "rancher") == "rancher2" {
 		e := f.driver.DeleteInstance(instance.ID.String())
 		if e != nil {

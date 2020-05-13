@@ -59,7 +59,7 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(e.serving.GetInstance(vars["id"]))
+	json.NewEncoder(w).Encode(e.serving.GetInstance(vars["id"], getUserId(req)))
 }
 
 func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request) {
@@ -73,7 +73,7 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(204)
-	e.serving.DeleteInstance(vars["id"])
+	e.serving.DeleteInstance(vars["id"], getUserId(req))
 	json.NewEncoder(w).Encode(lib.Response{"OK"})
 }
 
