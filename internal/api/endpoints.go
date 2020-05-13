@@ -20,9 +20,8 @@ import (
 	"analytics-serving/internal/lib"
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"net/http"
-
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -49,13 +48,8 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 	if err != nil {
 		fmt.Println(err)
 	}
-	userId := req.Header.Get("X-UserId")
-	if userId == "" {
-		userId = "admin"
-	}
-	userId = strings.Replace(userId, "\"", "", -1)
 	defer req.Body.Close()
-	e.serving.CreateInstance(servingReq, userId)
+	e.serving.CreateInstance(servingReq, getUserId(req))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	json.NewEncoder(w).Encode(lib.Response{"OK"})
@@ -72,12 +66,7 @@ func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 	args := req.URL.Query()
-	userId := req.Header.Get("X-UserId")
-	if userId == "" {
-		userId = "admin"
-	}
-	userId = strings.Replace(userId, "\"", "", -1)
-	json.NewEncoder(w).Encode(e.serving.GetInstances(userId, args))
+	json.NewEncoder(w).Encode(e.serving.GetInstances(getUserId(req), args))
 }
 
 func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Request) {
@@ -86,4 +75,24 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 	w.WriteHeader(204)
 	e.serving.DeleteInstance(vars["id"])
 	json.NewEncoder(w).Encode(lib.Response{"OK"})
+}
+
+func getUserId(req *http.Request) (userId string) {
+	userId = req.Header.Get("X-UserId")
+	if userId == "" {
+		encodedToken := req.Header.Get("Authorization")[7:]
+		token, err := jwt.Parse(encodedToken, nil)
+		if err != nil {
+			//TODO
+		}
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			userId = claims["sub"].(string)
+		} else {
+			fmt.Println(err)
+		}
+		if userId == "" {
+			userId = "admin"
+		}
+	}
+	return
 }
