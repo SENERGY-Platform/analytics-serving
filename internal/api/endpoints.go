@@ -50,10 +50,10 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 	}
 	defer req.Body.Close()
 	userId, _ := getUserInfo(req)
-	e.serving.CreateInstance(servingReq, userId)
+	instance := e.serving.CreateInstance(servingReq, userId)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
-	json.NewEncoder(w).Encode(lib.Response{"OK"})
+	json.NewEncoder(w).Encode(instance)
 }
 
 func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) {

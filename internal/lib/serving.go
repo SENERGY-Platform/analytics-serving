@@ -33,7 +33,7 @@ func NewServing(driver Driver) *Serving {
 	return &Serving{driver}
 }
 
-func (f *Serving) CreateInstance(req ServingRequest, userId string) {
+func (f *Serving) CreateInstance(req ServingRequest, userId string) Instance {
 	id := uuid.NewV4()
 	instance := Instance{
 		ID:          id,
@@ -66,6 +66,7 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) {
 
 	DB.NewRecord(instance)
 	DB.Create(&instance)
+	return instance
 }
 
 func (f *Serving) GetInstance(id string, userId string) (instance Instance, errors []error) {
