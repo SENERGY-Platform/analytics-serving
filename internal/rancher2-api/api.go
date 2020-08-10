@@ -56,8 +56,8 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) str
 		"OFFSET_RESET":        instance.Offset,
 	}
 
-	if instance.FilterType == "pipeId" {
-		env["DATA_FILTER_ID_MAPPING"] = "pipeline_id"
+	if instance.FilterType == "operatorId" {
+		env["DATA_FILTER_ID_MAPPING"] = "operator_id"
 	}
 
 	request := gorequest.New().SetBasicAuth(r.accessKey, r.secretKey).TLSClientConfig(&tls.Config{InsecureSkipVerify: true})

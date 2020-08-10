@@ -53,8 +53,8 @@ func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string) strin
 		"OFFSET_RESET":        instance.Offset,
 	}
 
-	if instance.FilterType == "pipeId" {
-		env["DATA_FILTER_ID_MAPPING"] = "pipeline_id"
+	if instance.FilterType == "operatorId" {
+		env["DATA_FILTER_ID_MAPPING"] = "operator_id"
 	}
 
 	labels := map[string]string{
