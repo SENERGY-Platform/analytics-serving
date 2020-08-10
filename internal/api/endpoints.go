@@ -138,6 +138,5 @@ func getUserInfo(req *http.Request) (userId string, admin bool) {
 
 func parseJWTToken(encodedToken string) (token *jwt.Token, claims lib.Claims) {
 	token, _ = jwt.ParseWithClaims(encodedToken, &claims, nil)
-	fmt.Println(claims)
 	return
 }
