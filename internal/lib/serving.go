@@ -18,10 +18,9 @@ package lib
 
 import (
 	"fmt"
-	influxClient "github.com/influxdata/influxdb/client/v2"
-
+	_ "github.com/influxdata/influxdb1-client"
+	influxClient "github.com/influxdata/influxdb1-client/v2"
 	uuid "github.com/satori/go.uuid"
-
 	"strings"
 )
 
@@ -134,28 +133,18 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 		Password: GetEnv("INFLUX_DB_PASSWORD", ""),
 	})
 	if err != nil {
+		fmt.Println(err)
 		errors = append(errors, err)
 	}
-	_, err = queryInfluxDB(c, fmt.Sprintf("DROP MEASUREMENT %s", `"`+instance.Measurement+`"`), instance.Database)
+	defer c.Close()
+	q := influxClient.NewQuery("DROP MEASUREMENT "+"\""+instance.Measurement+"\"", instance.Database, "")
+	response, err := c.Query(q)
 	if err != nil {
 		errors = append(errors, err)
 	}
+	if response.Error() != nil {
+		errors = append(errors, response.Error())
+	}
 	DB.Delete(&instance)
 	return true, errors
-}
-
-func queryInfluxDB(clnt influxClient.Client, cmd string, db string) (res []influxClient.Result, err error) {
-	q := influxClient.Query{
-		Command:  cmd,
-		Database: db,
-	}
-	if response, err := clnt.Query(q); err == nil {
-		if response.Error() != nil {
-			return res, response.Error()
-		}
-		res = response.Results
-	} else {
-		return res, err
-	}
-	return res, nil
 }
