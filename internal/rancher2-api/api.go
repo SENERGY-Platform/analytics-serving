@@ -56,6 +56,10 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) str
 		"OFFSET_RESET":        instance.Offset,
 	}
 
+	if instance.TimePrecision != nil && *instance.TimePrecision != "" {
+		env["TIME_PRECISION"] = *instance.TimePrecision
+	}
+
 	if instance.FilterType == "operatorId" {
 		env["DATA_FILTER_ID_MAPPING"] = "operator_id"
 	}

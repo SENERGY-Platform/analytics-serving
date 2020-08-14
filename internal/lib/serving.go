@@ -49,6 +49,9 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) Instance {
 		TimePath:    req.TimePath,
 		Offset:      req.Offset,
 	}
+	if req.TimePrecision != "" {
+		instance.TimePrecision = &req.TimePrecision
+	}
 	dataFields := "{"
 	var values []Value
 	for index, value := range req.Values {

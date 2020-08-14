@@ -36,6 +36,7 @@ type Instance struct {
 	Filter           string    `gorm:"type:varchar(255)"`
 	FilterType       string    `gorm:"type:varchar(255)"`
 	TimePath         string    `gorm:"type:varchar(255)"`
+	TimePrecision    *string   `gorm:"type:varchar(255)"`
 	UserId           string    `gorm:"type:varchar(255)"`
 	RancherServiceId string    `gorm:"type:varchar(255)"`
 	Offset           string    `gorm:"type:varchar(255)"`
