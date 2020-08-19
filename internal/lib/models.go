@@ -40,7 +40,7 @@ type Instance struct {
 	UserId           string    `gorm:"type:varchar(255)"`
 	RancherServiceId string    `gorm:"type:varchar(255)"`
 	Offset           string    `gorm:"type:varchar(255)"`
-	Values           []Value   `gorm:"foreignkey:InstanceID;association_foreignkey:ID;PRELOAD:true"`
+	Values           []Value   `gorm:"foreignkey:InstanceID;association_foreignkey:ID"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

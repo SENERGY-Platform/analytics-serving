@@ -64,6 +64,34 @@ func (e *Endpoint) postNewServingInstance(w http.ResponseWriter, req *http.Reque
 	}
 }
 
+func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Request) {
+	decoder := json.NewDecoder(req.Body)
+	var servingReq lib.ServingRequest
+	err := decoder.Decode(&servingReq)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer req.Body.Close()
+
+	validated, errors := ValidateInputs(servingReq)
+	if !validated {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		_ = json.NewEncoder(w).Encode(map[string]map[string][]string{"validationErrors": errors})
+	} else {
+		userId, _ := getUserInfo(req)
+		vars := mux.Vars(req)
+		instance, errors := e.serving.UpdateInstance(vars["id"], userId, servingReq)
+		if len(errors) > 0 {
+
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(instance)
+		}
+	}
+}
+
 func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")

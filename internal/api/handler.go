@@ -60,6 +60,7 @@ func CreateServer() {
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
 	router.HandleFunc("/instance", e.postNewServingInstance).Methods("POST")
 	router.HandleFunc("/instance", e.getServingInstances).Methods("GET")
+	router.HandleFunc("/instance/{id}", e.putNewServingInstance).Methods("PUT")
 	router.HandleFunc("/instance/{id}", e.getServingInstance).Methods("GET")
 	router.HandleFunc("/instance/{id}", e.deleteServingInstance).Methods("DELETE")
 	router.HandleFunc("/admin/instance", e.getServingInstancesAdmin).Methods("GET")

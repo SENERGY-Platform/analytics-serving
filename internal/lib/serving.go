@@ -71,6 +71,17 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) Instance {
 	return instance
 }
 
+func (f *Serving) UpdateInstance(id string, userId string, request ServingRequest) (instance Instance, errors []error) {
+	errors = DB.Where("id = ? AND user_id = ?", id, userId).First(&instance).GetErrors()
+	if len(errors) > 0 {
+		return
+	}
+	if instance.Name != request.Name || instance.Description != request.Description {
+		errors = DB.Model(&instance).Updates(map[string]interface{}{"name": request.Name, "description": request.Description}).GetErrors()
+	}
+	return
+}
+
 func (f *Serving) GetInstance(id string, userId string) (instance Instance, errors []error) {
 	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance).GetErrors()
 	return
