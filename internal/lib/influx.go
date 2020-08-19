@@ -76,3 +76,21 @@ func (i *Influx) GetMeasurements(userId string) (measurements []string, err erro
 	}
 	return measurements, err
 }
+
+func (i *Influx) forceDeleteMeasurement(id string, userId string, instance Instance) (errors []error) {
+	for {
+		errors = i.DropMeasurement(instance)
+		if len(errors) > 0 {
+			return
+		}
+		measurements, err := i.GetMeasurements(userId)
+		if err != nil {
+			errors = append(errors, err)
+			return
+		}
+		if !StringInSlice(id, measurements) {
+			break
+		}
+	}
+	return
+}

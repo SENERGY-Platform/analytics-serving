@@ -82,7 +82,7 @@ func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string) strin
 	}
 	resp, body, e := request.Post(r.url + "services").Send(reqBody).End()
 	if resp.StatusCode != http.StatusCreated {
-		fmt.Println("Something went totally wrong", resp)
+		fmt.Println("Something went totally wrong", resp.StatusCode)
 	}
 	if len(e) > 0 {
 		fmt.Println("Something went wrong", e)

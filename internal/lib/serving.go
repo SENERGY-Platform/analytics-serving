@@ -19,6 +19,7 @@ package lib
 import (
 	"fmt"
 	_ "github.com/influxdata/influxdb1-client"
+	"github.com/kr/pretty"
 	uuid "github.com/satori/go.uuid"
 	"strings"
 )
@@ -33,52 +34,71 @@ func NewServing(driver Driver) *Serving {
 	return &Serving{driver, influx}
 }
 
-func (f *Serving) CreateInstance(req ServingRequest, userId string) Instance {
+func (f *Serving) CreateInstance(req ServingRequest, userId string) (instance Instance) {
 	id := uuid.NewV4()
-	instance := Instance{
-		ID:          id,
-		Measurement: id.String(),
-		Name:        req.Name,
-		Description: req.Description,
-		EntityName:  req.EntityName,
-		ServiceName: req.ServiceName,
-		Topic:       req.Topic,
-		Filter:      req.Filter,
-		FilterType:  req.FilterType,
-		UserId:      userId,
-		Database:    userId,
-		TimePath:    req.TimePath,
-		Offset:      req.Offset,
-	}
-	if req.TimePrecision != "" {
-		instance.TimePrecision = &req.TimePrecision
-	}
-	dataFields := "{"
-	var values []Value
-	for index, value := range req.Values {
-		values = append(values, Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path})
-		dataFields = dataFields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
-		if index+1 < len(req.Values) {
-			dataFields = dataFields + ","
-		}
-	}
-	instance.Values = values
-	dataFields = dataFields + "}"
+	instance = f.createInstanceWithId(id, req, userId)
+	return
+}
 
+func (f *Serving) createInstanceWithId(id uuid.UUID, req ServingRequest, userId string) Instance {
+	instance, dataFields := populateInstance(id, req, userId)
 	instance.RancherServiceId = f.driver.CreateInstance(&instance, dataFields)
-
 	DB.NewRecord(instance)
 	DB.Create(&instance)
 	return instance
 }
 
 func (f *Serving) UpdateInstance(id string, userId string, request ServingRequest) (instance Instance, errors []error) {
-	errors = DB.Where("id = ? AND user_id = ?", id, userId).First(&instance).GetErrors()
+	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance).GetErrors()
 	if len(errors) > 0 {
 		return
 	}
-	if instance.Name != request.Name || instance.Description != request.Description {
-		errors = DB.Model(&instance).Updates(map[string]interface{}{"name": request.Name, "description": request.Description}).GetErrors()
+	uid, _ := uuid.FromString(id)
+	requestInstance, _ := populateInstance(uid, request, userId)
+	requestInstance.RancherServiceId = instance.RancherServiceId
+	requestInstance.CreatedAt = instance.CreatedAt
+	requestInstance.UpdatedAt = instance.UpdatedAt
+	change := pretty.Diff(instance, requestInstance)
+	if len(change) > 0 {
+		if len(change) > 2 {
+			for {
+				_, errors = f.DeleteInstanceForUser(id, userId)
+				if len(errors) < 1 {
+					instance = f.createInstanceWithId(uid, request, userId)
+					break
+				}
+			}
+		} else {
+			if len(change) == 1 {
+				if instance.Name != requestInstance.Name || instance.Description != requestInstance.Description {
+					errors = DB.Model(&instance).UpdateColumns(Instance{
+						Name:        requestInstance.Name,
+						Description: requestInstance.Description}).GetErrors()
+				} else {
+					for {
+						_, errors = f.DeleteInstanceForUser(id, userId)
+						if len(errors) < 1 {
+							instance = f.createInstanceWithId(uid, request, userId)
+							break
+						}
+					}
+				}
+			} else {
+				if instance.Name != requestInstance.Name && instance.Description != requestInstance.Description {
+					errors = DB.Model(&instance).UpdateColumns(Instance{
+						Name:        requestInstance.Name,
+						Description: requestInstance.Description}).GetErrors()
+				} else {
+					for {
+						_, errors = f.DeleteInstanceForUser(id, userId)
+						if len(errors) < 1 {
+							instance = f.createInstanceWithId(uid, request, userId)
+							break
+						}
+					}
+				}
+			}
+		}
 	}
 	return
 }
@@ -96,7 +116,6 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 	tx := DB.Select("*").Where("user_id = ?", userId)
 	if admin {
 		tx = DB.Select("*")
-
 	}
 	for arg, value := range args {
 		if arg == "limit" {
@@ -141,21 +160,41 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 		errors = append(errors, err)
 	}
 
-	for {
-		errors = f.influx.DropMeasurement(instance)
-		if len(errors) > 0 {
-			return
-		}
-		measurements, err := f.influx.GetMeasurements(userId)
-		if err != nil {
-			errors = append(errors, err)
-			return
-		}
-		if !StringInSlice(id, measurements) {
-			break
-		}
-	}
+	errors = f.influx.forceDeleteMeasurement(id, userId, instance)
 
 	DB.Delete(&instance)
 	return true, errors
+}
+
+func populateInstance(id uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string) {
+	instance = Instance{
+		ID:          id,
+		Measurement: id.String(),
+		Name:        req.Name,
+		Description: req.Description,
+		EntityName:  req.EntityName,
+		ServiceName: req.ServiceName,
+		Topic:       req.Topic,
+		Filter:      req.Filter,
+		FilterType:  req.FilterType,
+		UserId:      userId,
+		Database:    userId,
+		TimePath:    req.TimePath,
+		Offset:      req.Offset,
+	}
+	if req.TimePrecision != "" {
+		instance.TimePrecision = &req.TimePrecision
+	}
+	dataFields = "{"
+	var values []Value
+	for index, value := range req.Values {
+		values = append(values, Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path})
+		dataFields = dataFields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
+		if index+1 < len(req.Values) {
+			dataFields = dataFields + ","
+		}
+	}
+	instance.Values = values
+	dataFields = dataFields + "}"
+	return
 }
