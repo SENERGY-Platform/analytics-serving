@@ -17,19 +17,19 @@
 package lib
 
 import (
-	"fmt"
 	_ "github.com/influxdata/influxdb1-client"
-	influxClient "github.com/influxdata/influxdb1-client/v2"
 	uuid "github.com/satori/go.uuid"
 	"strings"
 )
 
 type Serving struct {
 	driver Driver
+	influx *Influx
 }
 
 func NewServing(driver Driver) *Serving {
-	return &Serving{driver}
+	influx := NewInflux()
+	return &Serving{driver, influx}
 }
 
 func (f *Serving) CreateInstance(req ServingRequest, userId string) Instance {
@@ -141,24 +141,12 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 			errors = append(errors, e)
 		}
 	}
-	c, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
-		Addr:     "http://" + GetEnv("INFLUX_DB_HOST", "") + ":" + GetEnv("INFLUX_DB_PORT", "8086"),
-		Username: GetEnv("INFLUX_DB_USERNAME", "root"),
-		Password: GetEnv("INFLUX_DB_PASSWORD", ""),
-	})
-	if err != nil {
-		fmt.Println(err)
-		errors = append(errors, err)
+
+	errors = f.influx.DropMeasurement(instance)
+	if len(errors) > 0 {
+		return
 	}
-	defer c.Close()
-	q := influxClient.NewQuery("DROP MEASUREMENT "+"\""+instance.Measurement+"\"", instance.Database, "")
-	response, err := c.Query(q)
-	if err != nil {
-		errors = append(errors, err)
-	}
-	if response.Error() != nil {
-		errors = append(errors, response.Error())
-	}
+
 	DB.Delete(&instance)
 	return true, errors
 }
