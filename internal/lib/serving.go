@@ -17,6 +17,7 @@
 package lib
 
 import (
+	"fmt"
 	_ "github.com/influxdata/influxdb1-client"
 	uuid "github.com/satori/go.uuid"
 	"strings"
@@ -121,6 +122,7 @@ func (f *Serving) DeleteInstanceForUser(id string, userId string) (deleted bool,
 }
 
 func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted bool, errors []error) {
+	deleted = false
 	instance := Instance{}
 	tx := DB.Where("id = ? AND user_id = ?", id, userId)
 	if admin {
@@ -128,23 +130,30 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	}
 	errors = tx.First(&instance).GetErrors()
 	if len(errors) > 0 {
-		return false, errors
+		fmt.Println(errors)
+		return
 	}
 	if GetEnv("DRIVER", "rancher") == "rancher2" {
-		e := f.driver.DeleteInstance(instance.ID.String())
-		if e != nil {
-			errors = append(errors, e)
-		}
+		err := f.driver.DeleteInstance(instance.ID.String())
+		errors = append(errors, err)
 	} else {
-		e := f.driver.DeleteInstance(instance.RancherServiceId)
-		if e != nil {
-			errors = append(errors, e)
-		}
+		err := f.driver.DeleteInstance(instance.RancherServiceId)
+		errors = append(errors, err)
 	}
 
-	errors = f.influx.DropMeasurement(instance)
-	if len(errors) > 0 {
-		return
+	for {
+		errors = f.influx.DropMeasurement(instance)
+		if len(errors) > 0 {
+			return
+		}
+		measurements, err := f.influx.GetMeasurements(userId)
+		if err != nil {
+			errors = append(errors, err)
+			return
+		}
+		if !StringInSlice(id, measurements) {
+			break
+		}
 	}
 
 	DB.Delete(&instance)

@@ -122,12 +122,10 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 	deleted, errors := e.serving.DeleteInstanceForUser(vars["id"], userId)
 	w.Header().Set("Content-Type", "application/json")
 	if len(errors) > 0 && deleted == false {
-		w.WriteHeader(404)
-	} else if len(errors) > 0 {
 		for _, err := range errors {
 			fmt.Println(err)
 		}
-		w.WriteHeader(204)
+		w.WriteHeader(404)
 	} else {
 		w.WriteHeader(204)
 	}

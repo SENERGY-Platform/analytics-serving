@@ -46,10 +46,33 @@ func (i *Influx) DropMeasurement(instance Instance) (errors []error) {
 	q := influxClient.NewQuery("DROP MEASUREMENT "+"\""+instance.Measurement+"\"", instance.Database, "")
 	response, err := i.client.Query(q)
 	if err != nil {
+		fmt.Println(err)
 		errors = append(errors, err)
 	}
 	if response.Error() != nil {
+		fmt.Println(response)
 		errors = append(errors, response.Error())
 	}
 	return
+}
+
+func (i *Influx) GetMeasurements(userId string) (measurements []string, err error) {
+	q := influxClient.NewQuery("SHOW MEASUREMENTS", userId, "")
+	response, err := i.client.Query(q)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if response.Error() != nil {
+		fmt.Println(response)
+		err = response.Error()
+		return
+	}
+
+	if len(response.Results[0].Series) > 0 {
+		for _, measurement := range response.Results[0].Series[0].Values {
+			measurements = append(measurements, measurement[0].(string))
+		}
+	}
+	return measurements, err
 }
