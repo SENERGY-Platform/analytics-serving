@@ -58,7 +58,7 @@ func CreateServer() {
 
 	e := NewEndpoint(driver)
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
-	router.HandleFunc("/instance", e.putNewServingInstance).Methods("PUT")
+	router.HandleFunc("/instance", e.postNewServingInstance).Methods("POST")
 	router.HandleFunc("/instance", e.getServingInstances).Methods("GET")
 	router.HandleFunc("/instance/{id}", e.getServingInstance).Methods("GET")
 	router.HandleFunc("/instance/{id}", e.deleteServingInstance).Methods("DELETE")

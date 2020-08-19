@@ -40,7 +40,7 @@ func (e *Endpoint) getRootEndpoint(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(lib.Response{"OK"})
 }
 
-func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Request) {
+func (e *Endpoint) postNewServingInstance(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var servingReq lib.ServingRequest
 	err := decoder.Decode(&servingReq)
