@@ -21,16 +21,16 @@ type Response struct {
 }
 
 type ServingRequest struct {
-	FilterType    string                `json:"FilterType,omitempty"`
-	Filter        string                `json:"Filter,omitempty"`
-	Name          string                `json:"Name,omitempty"`
-	EntityName    string                `json:"EntityName,omitempty"`
-	ServiceName   string                `json:"ServiceName,omitempty"`
+	FilterType    string                `json:"FilterType,omitempty" validate:"required"`
+	Filter        string                `json:"Filter,omitempty" validate:"required"`
+	Name          string                `json:"Name,omitempty" validate:"required"`
+	EntityName    string                `json:"EntityName,omitempty" validate:"required"`
+	ServiceName   string                `json:"ServiceName,omitempty" validate:"required"`
 	Description   string                `json:"Description,omitempty"`
-	Topic         string                `json:"Topic,omitempty"`
-	TimePath      string                `json:"TimePath,omitempty"`
+	Topic         string                `json:"Topic,omitempty" validate:"required"`
+	TimePath      string                `json:"TimePath,omitempty" validate:"required"`
 	TimePrecision string                `json:"TimePrecision,omitempty"`
-	Offset        string                `json:"Offset,omitempty"`
+	Offset        string                `json:"Offset,omitempty" validate:"required"`
 	Values        []ServingRequestValue `json:"Values,omitempty"`
 }
 

@@ -12,6 +12,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/go-kit/kit v0.9.0 // indirect
+	github.com/go-playground/validator/v10 v10.3.0
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/gogo/protobuf v1.2.2-0.20190730201129-28a6bbf47e48 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
@@ -19,7 +20,7 @@ require (
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.7.3
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
-	github.com/influxdata/influxdb v1.7.7
+	github.com/influxdata/influxdb v1.7.7 // indirect
 	github.com/influxdata/influxdb1-client v0.0.0-20200515024757-02f0bf5dbca3
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/jinzhu/gorm v1.9.10
@@ -46,6 +47,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20190815230801-eade30b20f1d // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/stretchr/testify v1.4.0 // indirect
+	github.com/thedevsaddam/govalidator v1.9.10 // indirect
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
 	golang.org/x/mobile v0.0.0-20190814143026-e8b3e6111d02 // indirect
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect

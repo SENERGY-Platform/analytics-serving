@@ -21,9 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"net/http"
-
 	"github.com/gorilla/mux"
+	"net/http"
 )
 
 type Endpoint struct {
@@ -49,11 +48,20 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 		fmt.Println(err)
 	}
 	defer req.Body.Close()
-	userId, _ := getUserInfo(req)
-	instance := e.serving.CreateInstance(servingReq, userId)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(201)
-	json.NewEncoder(w).Encode(instance)
+
+	validated, errors := ValidateInputs(servingReq)
+
+	if !validated {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		_ = json.NewEncoder(w).Encode(map[string]map[string][]string{"validationErrors": errors})
+	} else {
+		userId, _ := getUserInfo(req)
+		instance := e.serving.CreateInstance(servingReq, userId)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(201)
+		_ = json.NewEncoder(w).Encode(instance)
+	}
 }
 
 func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) {
