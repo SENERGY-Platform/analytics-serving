@@ -19,7 +19,6 @@ package rancher_api
 import (
 	"analytics-serving/internal/lib"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/parnurzeal/gorequest"
@@ -36,7 +35,7 @@ func NewRancher(url string, accessKey string, secretKey string, stackId string) 
 	return &Rancher{url, accessKey, secretKey, stackId}
 }
 
-func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string) string {
+func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string) (serviceId string, err error) {
 	env := map[string]string{
 		"KAFKA_GROUP_ID":      "transfer-" + instance.ID.String(),
 		"KAFKA_BOOTSTRAP":     lib.GetEnv("KAFKA_BOOTSTRAP", "broker.kafka.rancher.internal:9092"),
@@ -82,13 +81,15 @@ func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string) strin
 	}
 	resp, body, e := request.Post(r.url + "services").Send(reqBody).End()
 	if resp.StatusCode != http.StatusCreated {
-		fmt.Println("Something went totally wrong", resp.StatusCode)
+		err = errors.New("could not create export")
+		return
 	}
 	if len(e) > 0 {
-		fmt.Println("Something went wrong", e)
+		err = errors.New("could not create export")
+		return
 	}
-	data := lib.ToJson(body)
-	return data["id"].(string)
+	serviceId = lib.ToJson(body)["id"].(string)
+	return
 }
 
 func (r Rancher) DeleteInstance(serviceId string) (err error) {

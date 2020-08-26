@@ -22,6 +22,7 @@ import (
 	"github.com/kr/pretty"
 	uuid "github.com/satori/go.uuid"
 	"strings"
+	"time"
 )
 
 type Serving struct {
@@ -42,7 +43,21 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) (instance In
 
 func (f *Serving) createInstanceWithId(id uuid.UUID, req ServingRequest, userId string) Instance {
 	instance, dataFields := populateInstance(id, req, userId)
-	instance.RancherServiceId = f.driver.CreateInstance(&instance, dataFields)
+	for {
+		serviceId, err := f.driver.CreateInstance(&instance, dataFields)
+		if err == nil {
+			instance.RancherServiceId = serviceId
+			break
+		}
+		fmt.Println(err)
+		fmt.Println("Retrying in ...")
+		fmt.Println("3")
+		time.Sleep(1 * time.Second)
+		fmt.Println("2")
+		time.Sleep(1 * time.Second)
+		fmt.Println("1")
+		time.Sleep(1 * time.Second)
+	}
 	DB.NewRecord(instance)
 	DB.Create(&instance)
 	return instance

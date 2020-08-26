@@ -19,7 +19,6 @@ package rancher2_api
 import (
 	"analytics-serving/internal/lib"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"crypto/tls"
@@ -39,7 +38,7 @@ func NewRancher2(url string, accessKey string, secretKey string, namespaceId str
 	return &Rancher2{url, accessKey, secretKey, namespaceId, projectId}
 }
 
-func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) string {
+func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) (serviceId string, err error) {
 	env := map[string]string{
 		"KAFKA_GROUP_ID":      "transfer-" + instance.ID.String(),
 		"KAFKA_BOOTSTRAP":     lib.GetEnv("KAFKA_BOOTSTRAP", "broker.kafka.rancher.internal:9092"),
@@ -78,14 +77,16 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) str
 		Labels:     map[string]string{"exportId": instance.ID.String()},
 		Selector:   Selector{MatchLabels: map[string]string{"exportId": instance.ID.String()}},
 	}
-	resp, body, e := request.Post(r.url + "projects/" + r.projectId + "/workloads").Send(reqBody).End()
+	resp, _, e := request.Post(r.url + "projects/" + r.projectId + "/workloads").Send(reqBody).End()
 	if resp.StatusCode != http.StatusCreated {
-		fmt.Println("could not create export", body)
+		err = errors.New("could not create export")
+		return
 	}
 	if len(e) > 0 {
-		fmt.Println("something went wrong", e)
+		err = errors.New("could not create export")
+		return
 	}
-	return ""
+	return "", err
 }
 
 func (r *Rancher2) DeleteInstance(id string) (err error) {

@@ -17,6 +17,6 @@
 package lib
 
 type Driver interface {
-	CreateInstance(instance *Instance, dataFields string) string
+	CreateInstance(instance *Instance, dataFields string) (serviceId string, err error)
 	DeleteInstance(id string) (err error)
 }
