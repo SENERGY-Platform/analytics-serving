@@ -28,7 +28,7 @@ type ServingRequest struct {
 	ServiceName   string                `json:"ServiceName,omitempty" validate:"required"`
 	Description   string                `json:"Description,omitempty"`
 	Topic         string                `json:"Topic,omitempty" validate:"required"`
-	TimePath      string                `json:"TimePath,omitempty" validate:"required"`
+	TimePath      string                `json:"TimePath,omitempty"`
 	TimePrecision string                `json:"TimePrecision,omitempty"`
 	Offset        string                `json:"Offset,omitempty" validate:"required"`
 	Values        []ServingRequestValue `json:"Values,omitempty"`
