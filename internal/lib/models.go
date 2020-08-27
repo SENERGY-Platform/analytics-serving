@@ -38,6 +38,7 @@ type Instance struct {
 	TimePath         string    `gorm:"type:varchar(255)"`
 	TimePrecision    *string   `gorm:"type:varchar(255)"`
 	UserId           string    `gorm:"type:varchar(255)"`
+	Generated        bool      `gorm:"type:bool;DEFAULT:false"`
 	RancherServiceId string    `gorm:"type:varchar(255)"`
 	Offset           string    `gorm:"type:varchar(255)"`
 	Values           []Value   `gorm:"foreignkey:InstanceID;association_foreignkey:ID"`

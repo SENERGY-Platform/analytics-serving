@@ -146,6 +146,13 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 		if arg == "search" {
 			tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
 		}
+		if arg == "generated" {
+			if value[0] == "true" {
+				tx = tx.Where("`generated` = TRUE")
+			} else {
+				tx = tx.Where("`generated` = FALSE")
+			}
+		}
 	}
 	tx.Preload("Values").Find(&instances)
 	return
@@ -196,6 +203,7 @@ func populateInstance(id uuid.UUID, req ServingRequest, userId string) (instance
 		Database:    userId,
 		TimePath:    req.TimePath,
 		Offset:      req.Offset,
+		Generated:   req.Generated,
 	}
 	if req.TimePrecision != "" {
 		instance.TimePrecision = &req.TimePrecision
