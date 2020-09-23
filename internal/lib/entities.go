@@ -32,6 +32,7 @@ type ServingRequest struct {
 	TimePrecision string                `json:"TimePrecision,omitempty"`
 	Generated     bool                  `json:"generated,omitempty"`
 	Offset        string                `json:"Offset,omitempty" validate:"required"`
+	ForceUpdate   bool                  `json:"ForceUpdate,omitempty"`
 	Values        []ServingRequestValue `json:"Values,omitempty"`
 }
 

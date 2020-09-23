@@ -73,42 +73,52 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
 	requestInstance.UpdatedAt = instance.UpdatedAt
-	change := pretty.Diff(instance, requestInstance)
-	if len(change) > 0 {
-		if len(change) > 2 {
-			for {
-				_, errors = f.DeleteInstanceForUser(id, userId)
-				if len(errors) < 1 {
-					instance = f.createInstanceWithId(uid, request, userId)
-					break
-				}
+	if request.ForceUpdate {
+		for {
+			_, errors = f.DeleteInstanceForUser(id, userId)
+			if len(errors) < 1 {
+				instance = f.createInstanceWithId(uid, request, userId)
+				break
 			}
-		} else {
-			if len(change) == 1 {
-				if instance.Name != requestInstance.Name || instance.Description != requestInstance.Description {
-					errors = DB.Model(&instance).UpdateColumns(Instance{
-						Name:        requestInstance.Name,
-						Description: requestInstance.Description}).GetErrors()
-				} else {
-					for {
-						_, errors = f.DeleteInstanceForUser(id, userId)
-						if len(errors) < 1 {
-							instance = f.createInstanceWithId(uid, request, userId)
-							break
-						}
+		}
+	} else {
+		change := pretty.Diff(instance, requestInstance)
+		if len(change) > 0 {
+			if len(change) > 2 {
+				for {
+					_, errors = f.DeleteInstanceForUser(id, userId)
+					if len(errors) < 1 {
+						instance = f.createInstanceWithId(uid, request, userId)
+						break
 					}
 				}
 			} else {
-				if instance.Name != requestInstance.Name && instance.Description != requestInstance.Description {
-					errors = DB.Model(&instance).UpdateColumns(Instance{
-						Name:        requestInstance.Name,
-						Description: requestInstance.Description}).GetErrors()
+				if len(change) == 1 {
+					if instance.Name != requestInstance.Name || instance.Description != requestInstance.Description {
+						errors = DB.Model(&instance).UpdateColumns(Instance{
+							Name:        requestInstance.Name,
+							Description: requestInstance.Description}).GetErrors()
+					} else {
+						for {
+							_, errors = f.DeleteInstanceForUser(id, userId)
+							if len(errors) < 1 {
+								instance = f.createInstanceWithId(uid, request, userId)
+								break
+							}
+						}
+					}
 				} else {
-					for {
-						_, errors = f.DeleteInstanceForUser(id, userId)
-						if len(errors) < 1 {
-							instance = f.createInstanceWithId(uid, request, userId)
-							break
+					if instance.Name != requestInstance.Name && instance.Description != requestInstance.Description {
+						errors = DB.Model(&instance).UpdateColumns(Instance{
+							Name:        requestInstance.Name,
+							Description: requestInstance.Description}).GetErrors()
+					} else {
+						for {
+							_, errors = f.DeleteInstanceForUser(id, userId)
+							if len(errors) < 1 {
+								instance = f.createInstanceWithId(uid, request, userId)
+								break
+							}
 						}
 					}
 				}
