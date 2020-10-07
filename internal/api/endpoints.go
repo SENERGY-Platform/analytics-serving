@@ -132,11 +132,16 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 }
 
 func (e *Endpoint) getServingInstancesAdmin(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
 	args := req.URL.Query()
 	userId, admin := getUserInfo(req)
-	json.NewEncoder(w).Encode(e.serving.GetInstances(userId, args, admin))
+	w.Header().Set("Content-Type", "application/json")
+	if admin {
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(e.serving.GetInstances(userId, args, admin))
+	} else {
+		w.WriteHeader(403)
+		_ = json.NewEncoder(w).Encode("Forbidden")
+	}
 }
 
 func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.Request) {
