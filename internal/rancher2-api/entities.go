@@ -30,6 +30,14 @@ type Container struct {
 	Name            string            `json:"name,omitempty"`
 	Environment     map[string]string `json:"environment,omitempty"`
 	ImagePullPolicy string            `json:"imagePullPolicy,omitempty"`
+	Resources       Resources         `json:"resources,omitempty"`
+}
+type Resources struct {
+	Limits Limits `json:"limits,omitempty"`
+}
+
+type Limits struct {
+	Cpu string `json:"cpu,omitempty"`
 }
 
 type Selector struct {

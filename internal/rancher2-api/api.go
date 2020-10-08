@@ -72,6 +72,7 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) (se
 			Name:            "kafka2influx",
 			Environment:     env,
 			ImagePullPolicy: "Always",
+			Resources:       Resources{Limits: Limits{Cpu: "0.01"}},
 		}},
 		Scheduling: Scheduling{Scheduler: "default-scheduler", Node: Node{RequireAll: []string{"role=worker"}}},
 		Labels:     map[string]string{"exportId": instance.ID.String()},
