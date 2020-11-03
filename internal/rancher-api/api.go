@@ -60,6 +60,10 @@ func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string) (serv
 		env["DATA_FILTER_ID_MAPPING"] = "operator_id"
 	}
 
+	if instance.FilterType == "import_id" {
+		env["DATA_FILTER_ID_MAPPING"] = "import_id"
+	}
+
 	labels := map[string]string{
 		"io.rancher.container.pull_image":          "always",
 		"io.rancher.scheduler.affinity:host_label": "role=worker",

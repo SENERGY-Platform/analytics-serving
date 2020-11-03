@@ -63,6 +63,10 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string) (se
 		env["DATA_FILTER_ID_MAPPING"] = "operator_id"
 	}
 
+	if instance.FilterType == "import_id" {
+		env["DATA_FILTER_ID_MAPPING"] = "import_id"
+	}
+
 	request := gorequest.New().SetBasicAuth(r.accessKey, r.secretKey).TLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	reqBody := &Request{
 		Name:        r.getInstanceName(instance.ID.String()),
