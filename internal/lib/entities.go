@@ -34,6 +34,7 @@ type ServingRequest struct {
 	Offset        string                `json:"Offset,omitempty" validate:"required"`
 	ForceUpdate   bool                  `json:"ForceUpdate,omitempty"`
 	Values        []ServingRequestValue `json:"Values,omitempty"`
+	Tags          []ServingRequestValue `json:"Tags,omitempty"`
 }
 
 type ServingRequestValue struct {

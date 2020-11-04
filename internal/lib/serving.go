@@ -42,9 +42,9 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) (instance In
 }
 
 func (f *Serving) createInstanceWithId(id uuid.UUID, req ServingRequest, userId string) Instance {
-	instance, dataFields := populateInstance(id, req, userId)
+	instance, dataFields, tagFields := populateInstance(id, req, userId)
 	for {
-		serviceId, err := f.driver.CreateInstance(&instance, dataFields)
+		serviceId, err := f.driver.CreateInstance(&instance, dataFields, tagFields)
 		if err == nil {
 			instance.RancherServiceId = serviceId
 			break
@@ -69,7 +69,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 		return
 	}
 	uid, _ := uuid.FromString(id)
-	requestInstance, _ := populateInstance(uid, request, userId)
+	requestInstance, _, _ := populateInstance(uid, request, userId)
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
 	requestInstance.UpdatedAt = instance.UpdatedAt
@@ -198,7 +198,7 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	return true, errors
 }
 
-func populateInstance(id uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string) {
+func populateInstance(id uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string, tagFields string) {
 	instance = Instance{
 		ID:          id,
 		Measurement: id.String(),
@@ -218,16 +218,22 @@ func populateInstance(id uuid.UUID, req ServingRequest, userId string) (instance
 	if req.TimePrecision != "" {
 		instance.TimePrecision = &req.TimePrecision
 	}
-	dataFields = "{"
-	var values []Value
-	for index, value := range req.Values {
+
+	instance.Values, dataFields = transformServingValues(id, req.Values)
+	instance.Tags, tagFields = transformServingValues(id, req.Tags)
+
+	return
+}
+
+func transformServingValues(id uuid.UUID, requestValues []ServingRequestValue) (values []Value, fields string) {
+	fields = "{"
+	for index, value := range requestValues {
 		values = append(values, Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path})
-		dataFields = dataFields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
-		if index+1 < len(req.Values) {
-			dataFields = dataFields + ","
+		fields = fields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
+		if index+1 < len(requestValues) {
+			fields = fields + ","
 		}
 	}
-	instance.Values = values
-	dataFields = dataFields + "}"
+	fields = fields + "}"
 	return
 }
