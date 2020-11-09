@@ -1,12 +1,19 @@
-FROM golang:1.13
+FROM golang:1.15 AS builder
 
-COPY . /go/src/analytics-serving
-WORKDIR /go/src/analytics-serving
+COPY . /go/src/app
+WORKDIR /go/src/app
 
 ENV GO111MODULE=on
 
 RUN make build
 
+RUN git log -1 --oneline > version.txt
+
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /go/src/app/analytics-serving .
+COPY --from=builder /go/src/app/version.txt .
+
 EXPOSE 8000
 
-CMD ./analytics-serving
+ENTRYPOINT ["./analytics-serving"]
