@@ -5,7 +5,7 @@ all: deps build
 install:
 	go install cmd/analytics-serving/analytics-serving.go
 build:
-	go build cmd/analytics-serving/analytics-serving.go
+	CGO_ENABLED=0 go build cmd/analytics-serving/analytics-serving.go
 test:
 	go test -v ./...
 clean:
