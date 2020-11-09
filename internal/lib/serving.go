@@ -150,11 +150,20 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 			tx = tx.Offset(value[0])
 		}
 		if arg == "order" {
-			order := strings.Split(value[0], ":")
+			order := strings.SplitN(value[0], ":", 2)
 			tx = tx.Order(order[0] + " " + order[1])
 		}
 		if arg == "search" {
-			tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
+			search := strings.SplitN(value[0], ":", 2)
+			if len(search) > 1 {
+				allowed := []string{"name", "description", "entity_name", "service_name"}
+				if StringInSlice(search[0], allowed) {
+					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
+				}
+			} else {
+				tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
+			}
+
 		}
 		if arg == "generated" {
 			if value[0] == "true" {

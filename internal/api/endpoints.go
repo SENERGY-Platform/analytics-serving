@@ -162,7 +162,7 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 }
 
 func getUserInfo(req *http.Request) (userId string, admin bool) {
-	//userId = req.Header.Get("X-UserId")
+	userId = req.Header.Get("X-UserId")
 	if userId == "" {
 		_, claims := parseJWTToken(req.Header.Get("Authorization")[7:])
 		userId = claims.Sub
