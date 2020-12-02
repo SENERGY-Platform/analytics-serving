@@ -18,9 +18,10 @@ package lib
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
 	"github.com/kr/pretty"
-	uuid "github.com/satori/go.uuid"
+
 	"strings"
 	"time"
 )
@@ -36,13 +37,14 @@ func NewServing(driver Driver) *Serving {
 }
 
 func (f *Serving) CreateInstance(req ServingRequest, userId string) (instance Instance) {
-	id := uuid.NewV4()
-	instance = f.createInstanceWithId(id, req, userId)
+	id := uuid.New()
+	appId := uuid.New()
+	instance = f.createInstanceWithId(id, appId, req, userId)
 	return
 }
 
-func (f *Serving) createInstanceWithId(id uuid.UUID, req ServingRequest, userId string) Instance {
-	instance, dataFields, tagFields := populateInstance(id, req, userId)
+func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) Instance {
+	instance, dataFields, tagFields := populateInstance(id, appId, req, userId)
 	for {
 		serviceId, err := f.driver.CreateInstance(&instance, dataFields, tagFields)
 		if err == nil {
@@ -68,8 +70,8 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	if len(errors) > 0 {
 		return
 	}
-	uid, _ := uuid.FromString(id)
-	requestInstance, _, _ := populateInstance(uid, request, userId)
+	uid, _ := uuid.Parse(id)
+	requestInstance, _, _ := populateInstance(uid, instance.ApplicationId, request, userId)
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
 	requestInstance.UpdatedAt = instance.UpdatedAt
@@ -77,7 +79,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 		for {
 			_, errors = f.DeleteInstanceForUser(id, userId)
 			if len(errors) < 1 {
-				instance = f.createInstanceWithId(uid, request, userId)
+				instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
 				break
 			}
 		}
@@ -88,7 +90,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 				for {
 					_, errors = f.DeleteInstanceForUser(id, userId)
 					if len(errors) < 1 {
-						instance = f.createInstanceWithId(uid, request, userId)
+						instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
 						break
 					}
 				}
@@ -102,7 +104,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 						for {
 							_, errors = f.DeleteInstanceForUser(id, userId)
 							if len(errors) < 1 {
-								instance = f.createInstanceWithId(uid, request, userId)
+								instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
 								break
 							}
 						}
@@ -116,7 +118,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 						for {
 							_, errors = f.DeleteInstanceForUser(id, userId)
 							if len(errors) < 1 {
-								instance = f.createInstanceWithId(uid, request, userId)
+								instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
 								break
 							}
 						}
@@ -207,22 +209,23 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	return true, errors
 }
 
-func populateInstance(id uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string, tagFields string) {
+func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string, tagFields string) {
 	instance = Instance{
-		ID:          id,
-		Measurement: id.String(),
-		Name:        req.Name,
-		Description: req.Description,
-		EntityName:  req.EntityName,
-		ServiceName: req.ServiceName,
-		Topic:       req.Topic,
-		Filter:      req.Filter,
-		FilterType:  req.FilterType,
-		UserId:      userId,
-		Database:    userId,
-		TimePath:    req.TimePath,
-		Offset:      req.Offset,
-		Generated:   req.Generated,
+		ID:            id,
+		Measurement:   id.String(),
+		Name:          req.Name,
+		ApplicationId: appId,
+		Description:   req.Description,
+		EntityName:    req.EntityName,
+		ServiceName:   req.ServiceName,
+		Topic:         req.Topic,
+		Filter:        req.Filter,
+		FilterType:    req.FilterType,
+		UserId:        userId,
+		Database:      userId,
+		TimePath:      req.TimePath,
+		Offset:        req.Offset,
+		Generated:     req.Generated,
 	}
 	if req.TimePrecision != "" {
 		instance.TimePrecision = &req.TimePrecision

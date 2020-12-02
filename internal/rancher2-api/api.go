@@ -40,7 +40,7 @@ func NewRancher2(url string, accessKey string, secretKey string, namespaceId str
 
 func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
 	env := map[string]string{
-		"KAFKA_GROUP_ID":      "transfer-" + instance.ID.String(),
+		"KAFKA_GROUP_ID":      "transfer-" + instance.ApplicationId.String(),
 		"KAFKA_BOOTSTRAP":     lib.GetEnv("KAFKA_BOOTSTRAP", "broker.kafka.rancher.internal:9092"),
 		"KAFKA_TOPIC":         instance.Topic,
 		"DATA_MEASUREMENT":    instance.Measurement,

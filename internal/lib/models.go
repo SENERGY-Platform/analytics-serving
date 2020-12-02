@@ -17,9 +17,8 @@
 package lib
 
 import (
+	"github.com/google/uuid"
 	"time"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 type Instances []Instance
@@ -31,6 +30,7 @@ type Instance struct {
 	EntityName       string    `gorm:"type:varchar(255)"`
 	ServiceName      string    `gorm:"type:varchar(255)"`
 	Topic            string    `gorm:"type:varchar(255)"`
+	ApplicationId    uuid.UUID `gorm:"type:char(36)"`
 	Database         string    `gorm:"type:varchar(255)"`
 	Measurement      string    `gorm:"type:varchar(255)"`
 	Filter           string    `gorm:"type:varchar(255)"`
