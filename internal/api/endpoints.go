@@ -164,12 +164,14 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 func getUserInfo(req *http.Request) (userId string, admin bool) {
 	//userId = req.Header.Get("X-UserId")
 	if userId == "" {
-		_, claims := parseJWTToken(req.Header.Get("Authorization")[7:])
-		userId = claims.Sub
-		admin = claims.IsAdmin()
-		if userId == "" {
-			userId = "admin"
-			admin = false
+		if len(req.Header.Get("Authorization")) > 0 {
+			_, claims := parseJWTToken(req.Header.Get("Authorization")[7:])
+			userId = claims.Sub
+			admin = claims.IsAdmin()
+			if userId == "" {
+				userId = "admin"
+				admin = false
+			}
 		}
 	}
 	return

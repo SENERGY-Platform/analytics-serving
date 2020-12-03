@@ -74,5 +74,5 @@ func CreateServer() {
 	handler := c.Handler(router)
 	logger := lib.NewLogger(handler, lib.GetEnv("LOG_LEVEL", "CALL"))
 	defer logger.CloseLogFile()
-	log.Fatal(http.ListenAndServe(":"+port, logger))
+	log.Fatal(http.ListenAndServe(lib.GetEnv("SERVERNAME", "")+":"+port, logger))
 }

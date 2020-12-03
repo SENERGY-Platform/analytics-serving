@@ -71,7 +71,11 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 		return
 	}
 	uid, _ := uuid.Parse(id)
-	requestInstance, _, _ := populateInstance(uid, instance.ApplicationId, request, userId)
+	appId := instance.ApplicationId
+	if appId.ID() == 0 {
+		appId = uuid.New()
+	}
+	requestInstance, _, _ := populateInstance(uid, appId, request, userId)
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
 	requestInstance.UpdatedAt = instance.UpdatedAt
@@ -79,7 +83,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 		for {
 			_, errors = f.DeleteInstanceForUser(id, userId)
 			if len(errors) < 1 {
-				instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
+				instance = f.createInstanceWithId(uid, appId, request, userId)
 				break
 			}
 		}
@@ -90,7 +94,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 				for {
 					_, errors = f.DeleteInstanceForUser(id, userId)
 					if len(errors) < 1 {
-						instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
+						instance = f.createInstanceWithId(uid, appId, request, userId)
 						break
 					}
 				}
@@ -104,7 +108,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 						for {
 							_, errors = f.DeleteInstanceForUser(id, userId)
 							if len(errors) < 1 {
-								instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
+								instance = f.createInstanceWithId(uid, appId, request, userId)
 								break
 							}
 						}
@@ -118,7 +122,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 						for {
 							_, errors = f.DeleteInstanceForUser(id, userId)
 							if len(errors) < 1 {
-								instance = f.createInstanceWithId(uid, instance.ApplicationId, request, userId)
+								instance = f.createInstanceWithId(uid, appId, request, userId)
 								break
 							}
 						}
