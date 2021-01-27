@@ -34,13 +34,13 @@ type ServingRequest struct {
 	Offset        string                `json:"Offset,omitempty" validate:"required"`
 	ForceUpdate   bool                  `json:"ForceUpdate,omitempty"`
 	Values        []ServingRequestValue `json:"Values,omitempty"`
-	Tags          []ServingRequestValue `json:"Tags,omitempty"`
 }
 
 type ServingRequestValue struct {
 	Name string `json:"Name,omitempty"`
 	Type string `json:"Type,omitempty"`
 	Path string `json:"Path,omitempty"`
+	Tag  bool   `json:"Tag"`
 }
 
 type Claims struct {

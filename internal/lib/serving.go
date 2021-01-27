@@ -235,21 +235,29 @@ func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId 
 		instance.TimePrecision = &req.TimePrecision
 	}
 
-	instance.Values, dataFields = transformServingValues(id, req.Values)
-	instance.Tags, tagFields = transformServingValues(id, req.Tags)
+	instance.Values, dataFields, tagFields = transformServingValues(id, req.Values)
 
 	return
 }
 
-func transformServingValues(id uuid.UUID, requestValues []ServingRequestValue) (values []Value, fields string) {
-	fields = "{"
-	for index, value := range requestValues {
-		values = append(values, Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path})
-		fields = fields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
-		if index+1 < len(requestValues) {
-			fields = fields + ","
+func transformServingValues(id uuid.UUID, requestValues []ServingRequestValue) (values []Value, dataFields string, tagFields string) {
+	dataFields = "{"
+	tagFields = "{"
+	for _, value := range requestValues {
+		values = append(values, Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path, Tag: value.Tag})
+		if value.Tag {
+			if len(tagFields) > 1 {
+				tagFields = tagFields + ","
+			}
+			tagFields = tagFields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
+		} else {
+			if len(dataFields) > 1 {
+				dataFields = dataFields + ","
+			}
+			dataFields = dataFields + "\"" + value.Name + ":" + value.Type + "\":\"" + value.Path + "\""
 		}
 	}
-	fields = fields + "}"
+	dataFields = dataFields + "}"
+	tagFields = tagFields + "}"
 	return
 }
