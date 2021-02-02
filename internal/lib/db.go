@@ -17,7 +17,7 @@
 package lib
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -31,12 +31,12 @@ func Init() {
 		"@(" + GetEnv("MYSQL_HOST", "") + ":3306)" +
 		"/" + GetEnv("MYSQL_DB", "") +
 		"?charset=utf8&parseTime=True&loc=Local"
-	fmt.Println("Connecting to: " + connectionString)
+	log.Println("Connecting to: " + connectionString)
 	db, err := gorm.Open("mysql", connectionString)
 	if err != nil {
 		panic("failed to connect database: " + err.Error())
 	} else {
-		fmt.Println("Connected to DB.")
+		log.Println("Connected to DB.")
 	}
 	db.Set("gorm:table_options", "ENGINE=InnoDB")
 	db.LogMode(false)

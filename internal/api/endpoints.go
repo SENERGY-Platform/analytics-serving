@@ -19,9 +19,9 @@ package api
 import (
 	"analytics-serving/internal/lib"
 	"encoding/json"
-	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 )
 
@@ -45,7 +45,7 @@ func (e *Endpoint) postNewServingInstance(w http.ResponseWriter, req *http.Reque
 	var servingReq lib.ServingRequest
 	err := decoder.Decode(&servingReq)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	defer req.Body.Close()
 
@@ -69,7 +69,7 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 	var servingReq lib.ServingRequest
 	err := decoder.Decode(&servingReq)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	defer req.Body.Close()
 
@@ -99,7 +99,7 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 	instance, errors := e.serving.GetInstance(vars["id"], userId)
 	if len(errors) > 0 {
 		for _, err := range errors {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		w.WriteHeader(404)
 	} else {
@@ -123,7 +123,7 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 	w.Header().Set("Content-Type", "application/json")
 	if len(errors) > 0 && deleted == false {
 		for _, err := range errors {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		w.WriteHeader(404)
 	} else {
@@ -153,7 +153,7 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 		w.WriteHeader(404)
 	} else if len(errors) > 0 {
 		for _, err := range errors {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		w.WriteHeader(204)
 	} else {

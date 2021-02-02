@@ -17,7 +17,7 @@
 package lib
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/jinzhu/gorm"
 )
@@ -32,12 +32,12 @@ func NewMigration(db *gorm.DB) *Migration {
 
 func (m *Migration) Migrate() {
 	if !DB.HasTable("instances") {
-		fmt.Println("Creating instances table.")
+		log.Println("Creating instances table.")
 		DB.CreateTable(&Instance{})
 	}
 	DB.AutoMigrate(&Instance{})
 	if !DB.HasTable("values") {
-		fmt.Println("Creating values table.")
+		log.Println("Creating values table.")
 		DB.CreateTable(&Value{})
 	}
 	DB.AutoMigrate(&Value{})

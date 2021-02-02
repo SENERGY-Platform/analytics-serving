@@ -17,7 +17,8 @@
 package lib
 
 import (
-	"fmt"
+	"log"
+
 	influxClient "github.com/influxdata/influxdb1-client/v2"
 )
 
@@ -32,11 +33,11 @@ func NewInflux() *Influx {
 		Password: GetEnv("INFLUX_DB_PASSWORD", ""),
 	})
 	if err != nil {
-		fmt.Println("could not connect to influx: " + err.Error())
+		log.Println("could not connect to influx: " + err.Error())
 	}
 	defer func() {
 		if err := client.Close(); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}()
 	return &Influx{client}

@@ -20,7 +20,6 @@ import (
 	"analytics-serving/internal/lib"
 	rancher_api "analytics-serving/internal/rancher-api"
 	rancher2_api "analytics-serving/internal/rancher2-api"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -32,7 +31,7 @@ func CreateServer() {
 	var driver lib.Driver
 	switch selectedDriver := lib.GetEnv("DRIVER", "rancher"); selectedDriver {
 	case "rancher":
-		fmt.Println("using rancher driver")
+		log.Println("using rancher driver")
 		driver = rancher_api.NewRancher(
 			lib.GetEnv("RANCHER_ENDPOINT", ""),
 			lib.GetEnv("RANCHER_ACCESS_KEY", ""),
@@ -40,7 +39,7 @@ func CreateServer() {
 			lib.GetEnv("RANCHER_STACK_ID", ""),
 		)
 	case "rancher2":
-		fmt.Println("using rancher2 driver")
+		log.Println("using rancher2 driver")
 		driver = rancher2_api.NewRancher2(
 			lib.GetEnv("RANCHER2_ENDPOINT", ""),
 			lib.GetEnv("RANCHER2_ACCESS_KEY", ""),
@@ -49,11 +48,11 @@ func CreateServer() {
 			lib.GetEnv("RANCHER2_PROJECT_ID", ""),
 		)
 	default:
-		fmt.Println("No driver selected")
+		log.Println("No driver selected")
 	}
 
 	port := lib.GetEnv("API_PORT", "8000")
-	fmt.Print("Starting Server at port " + port + "\n")
+	log.Print("Starting Server at port " + port + "\n")
 	router := mux.NewRouter()
 
 	e := NewEndpoint(driver)

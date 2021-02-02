@@ -17,11 +17,11 @@
 package lib
 
 import (
-	"fmt"
+	"log"
+
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
 	"github.com/kr/pretty"
-	"log"
 
 	"strings"
 	"time"
@@ -52,13 +52,13 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req Servin
 			instance.RancherServiceId = serviceId
 			break
 		}
-		fmt.Println(err)
-		fmt.Println("Retrying in ...")
-		fmt.Println("3")
+		log.Println(err)
+		log.Println("Retrying in ...")
+		log.Println("3")
 		time.Sleep(1 * time.Second)
-		fmt.Println("2")
+		log.Println("2")
 		time.Sleep(1 * time.Second)
-		fmt.Println("1")
+		log.Println("1")
 		time.Sleep(1 * time.Second)
 	}
 	DB.NewRecord(instance)
@@ -179,7 +179,7 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	}
 	errors = tx.First(&instance).GetErrors()
 	if len(errors) > 0 {
-		fmt.Println(errors)
+		log.Println(errors)
 		return
 	}
 	if GetEnv("DRIVER", "rancher") == "rancher2" {

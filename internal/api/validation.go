@@ -17,8 +17,8 @@
 package api
 
 import (
-	"fmt"
 	"github.com/go-playground/validator/v10"
+	"log"
 	"reflect"
 	"strings"
 )
@@ -42,12 +42,12 @@ func ValidateInputs(dataSet interface{}) (bool, map[string][]string) {
 		errors := make(map[string][]string)
 
 		if _, ok := err.(*validator.InvalidValidationError); ok {
-			fmt.Println(err)
+			log.Println(err)
 			return false, errors
 		}
 
 		for _, err := range err.(validator.ValidationErrors) {
-			fmt.Println(err.Param())
+			log.Println(err.Param())
 			switch err.Tag() {
 			case "required":
 				errors[err.Field()] = append(errors[err.Field()], "The field '"+err.Field()+"' is required")
