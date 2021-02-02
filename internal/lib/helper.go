@@ -18,7 +18,10 @@ package lib
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"os"
+	"time"
 )
 
 func GetEnv(key, fallback string) string {
@@ -42,4 +45,22 @@ func StringInSlice(str string, slice []string) bool {
 		}
 	}
 	return false
+}
+
+func retry(attempts int, sleep time.Duration, f func() error) (err error) {
+	for i := 0; ; i++ {
+		err = f()
+		if err == nil {
+			return
+		}
+
+		if i >= (attempts - 1) {
+			break
+		}
+
+		time.Sleep(sleep)
+
+		log.Println("retrying after error:", err)
+	}
+	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 }

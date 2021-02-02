@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
 	"github.com/kr/pretty"
+	"log"
 
 	"strings"
 	"time"
@@ -80,58 +81,40 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	requestInstance.CreatedAt = instance.CreatedAt
 	requestInstance.UpdatedAt = instance.UpdatedAt
 	if request.ForceUpdate {
-		for {
-			_, errors = f.DeleteInstanceForUser(id, userId)
-			if len(errors) < 1 {
-				instance = f.createInstanceWithId(uid, appId, request, userId)
-				break
-			}
-		}
+		instance = f.update(id, userId, request, instance, uid, appId)
 	} else {
 		change := pretty.Diff(instance, requestInstance)
-		if len(change) > 0 {
-			if len(change) > 2 {
-				for {
-					_, errors = f.DeleteInstanceForUser(id, userId)
-					if len(errors) < 1 {
-						instance = f.createInstanceWithId(uid, appId, request, userId)
-						break
-					}
-				}
+		if len(change) > 2 {
+			instance = f.update(id, userId, request, instance, uid, appId)
+		}
+		if len(change) == 1 {
+			if instance.Name != requestInstance.Name || instance.Description != requestInstance.Description {
+				errors = DB.Model(&instance).UpdateColumns(Instance{
+					Name:        requestInstance.Name,
+					Description: requestInstance.Description}).GetErrors()
 			} else {
-				if len(change) == 1 {
-					if instance.Name != requestInstance.Name || instance.Description != requestInstance.Description {
-						errors = DB.Model(&instance).UpdateColumns(Instance{
-							Name:        requestInstance.Name,
-							Description: requestInstance.Description}).GetErrors()
-					} else {
-						for {
-							_, errors = f.DeleteInstanceForUser(id, userId)
-							if len(errors) < 1 {
-								instance = f.createInstanceWithId(uid, appId, request, userId)
-								break
-							}
-						}
-					}
-				} else {
-					if instance.Name != requestInstance.Name && instance.Description != requestInstance.Description {
-						errors = DB.Model(&instance).UpdateColumns(Instance{
-							Name:        requestInstance.Name,
-							Description: requestInstance.Description}).GetErrors()
-					} else {
-						for {
-							_, errors = f.DeleteInstanceForUser(id, userId)
-							if len(errors) < 1 {
-								instance = f.createInstanceWithId(uid, appId, request, userId)
-								break
-							}
-						}
-					}
-				}
+				instance = f.update(id, userId, request, instance, uid, appId)
 			}
 		}
 	}
 	return
+}
+
+func (f *Serving) update(id string, userId string, request ServingRequest, instance Instance, uid uuid.UUID, appId uuid.UUID) Instance {
+	err := retry(5, 5*time.Second, func() (err error) {
+		_, errors := f.DeleteInstanceForUser(id, userId)
+		if len(errors) > 1 {
+			err = errors[0]
+		}
+		return err
+	})
+	if err != nil {
+		log.Println(err)
+	} else {
+		instance = f.createInstanceWithId(uid, appId, request, userId)
+		log.Println("serving - successfully updated export - " + instance.ID.String())
+	}
+	return instance
 }
 
 func (f *Serving) GetInstance(id string, userId string) (instance Instance, errors []error) {
