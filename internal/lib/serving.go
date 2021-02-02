@@ -46,23 +46,20 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string) (instance In
 
 func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) Instance {
 	instance, dataFields, tagFields := populateInstance(id, appId, req, userId)
-	for {
+	err := retry(5, 5*time.Second, func() (err error) {
 		serviceId, err := f.driver.CreateInstance(&instance, dataFields, tagFields)
 		if err == nil {
 			instance.RancherServiceId = serviceId
-			break
 		}
+		return
+	})
+	if err != nil {
 		log.Println(err)
-		log.Println("Retrying in ...")
-		log.Println("3")
-		time.Sleep(1 * time.Second)
-		log.Println("2")
-		time.Sleep(1 * time.Second)
-		log.Println("1")
-		time.Sleep(1 * time.Second)
+	} else {
+		DB.NewRecord(instance)
+		DB.Create(&instance)
+		log.Println("serving - successfully created export - " + instance.ID.String())
 	}
-	DB.NewRecord(instance)
-	DB.Create(&instance)
 	return instance
 }
 
