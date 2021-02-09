@@ -19,10 +19,10 @@ package api
 import (
 	"analytics-serving/internal/lib"
 	"encoding/json"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type Endpoint struct {
@@ -101,10 +101,10 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 		for _, err := range errors {
 			log.Println(err)
 		}
-		w.WriteHeader(404)
+		w.WriteHeader(500)
 	} else {
 		w.WriteHeader(200)
-		json.NewEncoder(w).Encode(instance)
+		_ = json.NewEncoder(w).Encode(instance)
 	}
 }
 
@@ -113,7 +113,17 @@ func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request)
 	w.WriteHeader(200)
 	args := req.URL.Query()
 	userId, _ := getUserInfo(req)
-	json.NewEncoder(w).Encode(e.serving.GetInstancesForUser(userId, args))
+	instances, count, errors := e.serving.GetInstancesForUser(userId, args)
+	if len(errors) > 0 {
+		log.Println(errors)
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(lib.InstancesResponse{
+			Count:     count,
+			Instances: instances,
+		})
+	}
 }
 
 func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Request) {
@@ -125,7 +135,7 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 		for _, err := range errors {
 			log.Println(err)
 		}
-		w.WriteHeader(404)
+		w.WriteHeader(500)
 	} else {
 		w.WriteHeader(204)
 	}
@@ -136,8 +146,14 @@ func (e *Endpoint) getServingInstancesAdmin(w http.ResponseWriter, req *http.Req
 	userId, admin := getUserInfo(req)
 	w.Header().Set("Content-Type", "application/json")
 	if admin {
-		w.WriteHeader(200)
-		_ = json.NewEncoder(w).Encode(e.serving.GetInstances(userId, args, admin))
+		instances, _, errors := e.serving.GetInstances(userId, args, admin)
+		if len(errors) > 0 {
+			log.Println(errors)
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(instances)
+		}
 	} else {
 		w.WriteHeader(403)
 		_ = json.NewEncoder(w).Encode("Forbidden")
@@ -155,7 +171,7 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 		for _, err := range errors {
 			log.Println(err)
 		}
-		w.WriteHeader(204)
+		w.WriteHeader(500)
 	} else {
 		w.WriteHeader(204)
 	}

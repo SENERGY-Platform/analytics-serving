@@ -43,6 +43,11 @@ type ServingRequestValue struct {
 	Tag  bool   `json:"Tag"`
 }
 
+type InstancesResponse struct {
+	Count     int64     `json:"count,omitempty"`
+	Instances Instances `json:"instances,omitempty"`
+}
+
 type Claims struct {
 	Sub         string              `json:"sub,omitempty"`
 	RealmAccess map[string][]string `json:"realm_access,omitempty"`
