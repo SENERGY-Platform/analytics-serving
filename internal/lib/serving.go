@@ -125,6 +125,7 @@ func (f *Serving) GetInstancesForUser(userId string, args map[string][]string) (
 
 func (f *Serving) GetInstances(userId string, args map[string][]string, admin bool) (instances Instances, total int64, errors []error) {
 	tx := DB.Select("*").Where("user_id = ?", userId)
+	countTx := DB.Where("user_id = ?", userId)
 	if admin {
 		tx = DB.Select("*")
 	}
@@ -154,13 +155,15 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 		if arg == "generated" {
 			if value[0] == "true" {
 				tx = tx.Where("`generated` = TRUE")
+				countTx = countTx.Where("`generated` = TRUE")
 			} else {
 				tx = tx.Where("`generated` = FALSE")
+				countTx.Where("`generated` = FALSE")
 			}
 		}
 	}
 	errors = tx.Preload("Values").Find(&instances).GetErrors()
-	DB.Where("user_id = ?", userId).Find(&Instances{}).Count(&total)
+	countTx.Find(&Instances{}).Count(&total)
 	return
 }
 
