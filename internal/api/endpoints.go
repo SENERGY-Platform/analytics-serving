@@ -19,6 +19,7 @@ package api
 import (
 	"analytics-serving/internal/lib"
 	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	"log"
 	"net/http"
 
