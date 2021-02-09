@@ -158,7 +158,7 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 				countTx = countTx.Where("`generated` = TRUE")
 			} else {
 				tx = tx.Where("`generated` = FALSE")
-				countTx.Where("`generated` = FALSE")
+				countTx = countTx.Where("`generated` = FALSE")
 			}
 		}
 	}
