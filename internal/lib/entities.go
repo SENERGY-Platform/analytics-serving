@@ -44,7 +44,8 @@ type ServingRequestValue struct {
 }
 
 type InstancesResponse struct {
-	Count     int64     `json:"count,omitempty"`
+	Total     int64     `json:"total,omitempty"`
+	Count     int       `json:"count,omitempty"`
 	Instances Instances `json:"instances,omitempty"`
 }
 

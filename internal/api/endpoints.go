@@ -111,17 +111,17 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 
 func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
 	args := req.URL.Query()
 	userId, _ := getUserInfo(req)
-	instances, count, errors := e.serving.GetInstancesForUser(userId, args)
+	instances, total, errors := e.serving.GetInstancesForUser(userId, args)
 	if len(errors) > 0 {
 		log.Println(errors)
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(lib.InstancesResponse{
-			Count:     count,
+			Total:     total,
+			Count:     len(instances),
 			Instances: instances,
 		})
 	}
