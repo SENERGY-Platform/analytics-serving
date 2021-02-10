@@ -76,8 +76,8 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 	defer req.Body.Close()
 
 	validated, errors := ValidateInputs(servingReq)
+	w.Header().Set("Content-Type", "application/json")
 	if !validated {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(400)
 		_ = json.NewEncoder(w).Encode(map[string]map[string][]string{"validationErrors": errors})
 	} else {
@@ -85,9 +85,11 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 		vars := mux.Vars(req)
 		instance, errors := e.serving.UpdateInstance(vars["id"], userId, servingReq)
 		if len(errors) > 0 {
-
+			for _, err := range errors {
+				log.Println(err)
+			}
+			w.WriteHeader(http.StatusInternalServerError)
 		} else {
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(instance)
 		}

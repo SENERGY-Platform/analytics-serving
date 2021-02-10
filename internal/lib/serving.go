@@ -21,8 +21,6 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
-	"github.com/kr/pretty"
-
 	"strings"
 	"time"
 )
@@ -77,23 +75,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
 	requestInstance.UpdatedAt = instance.UpdatedAt
-	if request.ForceUpdate {
-		instance = f.update(id, userId, request, instance, uid, appId)
-	} else {
-		change := pretty.Diff(instance, requestInstance)
-		if len(change) > 2 {
-			instance = f.update(id, userId, request, instance, uid, appId)
-		}
-		if len(change) == 1 {
-			if instance.Name != requestInstance.Name || instance.Description != requestInstance.Description {
-				errors = DB.Model(&instance).UpdateColumns(Instance{
-					Name:        requestInstance.Name,
-					Description: requestInstance.Description}).GetErrors()
-			} else {
-				instance = f.update(id, userId, request, instance, uid, appId)
-			}
-		}
-	}
+	instance = f.update(id, userId, request, instance, uid, appId)
 	return
 }
 
