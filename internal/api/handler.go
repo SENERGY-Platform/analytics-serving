@@ -62,6 +62,7 @@ func CreateServer() {
 	router.HandleFunc("/instance/{id}", e.putNewServingInstance).Methods("PUT")
 	router.HandleFunc("/instance/{id}", e.getServingInstance).Methods("GET")
 	router.HandleFunc("/instance/{id}", e.deleteServingInstance).Methods("DELETE")
+	router.HandleFunc("/instances", e.deleteServingInstances).Methods("DELETE")
 	router.HandleFunc("/admin/instance", e.getServingInstancesAdmin).Methods("GET")
 	router.HandleFunc("/admin/instance/{id}", e.deleteServingInstanceAdmin).Methods("DELETE")
 	c := cors.New(

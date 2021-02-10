@@ -22,6 +22,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -139,6 +140,32 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 		w.WriteHeader(500)
 	} else {
 		w.WriteHeader(204)
+	}
+}
+
+func (e *Endpoint) deleteServingInstances(w http.ResponseWriter, req *http.Request) {
+	decoder := json.NewDecoder(req.Body)
+	var requestBody []string
+	err := decoder.Decode(&requestBody)
+	if err != nil {
+		log.Println(err)
+	}
+	defer req.Body.Close()
+	userId, _ := getUserInfo(req)
+	deleted, errors := e.serving.DeleteInstancesForUser(requestBody, userId)
+	w.Header().Set("Content-Type", "application/json")
+	if len(errors) > 0 && len(deleted) < 1 {
+		for _, err := range errors {
+			log.Println(err)
+		}
+		w.WriteHeader(500)
+	} else if len(errors) > 0 && len(deleted) > 0 {
+		w.WriteHeader(http.StatusMultiStatus)
+		_ = json.NewEncoder(w).Encode(lib.Response{
+			Message: "Could not delete all exports. Exports deleted: " + strings.Join(deleted, ","),
+		})
+	} else {
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 

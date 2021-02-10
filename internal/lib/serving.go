@@ -167,6 +167,18 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 	return
 }
 
+func (f *Serving) DeleteInstancesForUser(ids []string, userId string) (deleted []string, errors []error) {
+	for _, id := range ids {
+		success, errs := f.DeleteInstance(id, userId, false)
+		if success {
+			deleted = append(deleted, id)
+		} else {
+			errors = append(errors, errs...)
+		}
+	}
+	return
+}
+
 func (f *Serving) DeleteInstanceForUser(id string, userId string) (deleted bool, errors []error) {
 	return f.DeleteInstance(id, userId, false)
 }
@@ -183,16 +195,19 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 		log.Println(errors)
 		return
 	}
-	if GetEnv("DRIVER", "rancher") == "rancher2" {
-		err := f.driver.DeleteInstance(instance.ID.String())
+	err := retry(5, 5*time.Second, func() (err error) {
+		if GetEnv("DRIVER", "rancher") == "rancher2" {
+			err = f.driver.DeleteInstance(instance.ID.String())
+		} else {
+			err = f.driver.DeleteInstance(instance.RancherServiceId)
+		}
+		return err
+	})
+	if err != nil {
 		errors = append(errors, err)
 	} else {
-		err := f.driver.DeleteInstance(instance.RancherServiceId)
-		errors = append(errors, err)
+		errors = f.influx.forceDeleteMeasurement(id, userId, instance)
 	}
-
-	errors = f.influx.forceDeleteMeasurement(id, userId, instance)
-
 	DB.Delete(&instance)
 	return true, errors
 }

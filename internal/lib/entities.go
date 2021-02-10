@@ -17,7 +17,7 @@
 package lib
 
 type Response struct {
-	Message string `json:"message,omitempty"`
+	Message string `json:"message,omitempty" validate:"required"`
 }
 
 type ServingRequest struct {
