@@ -128,9 +128,11 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 				allowed := []string{"name", "description", "entity_name", "service_name"}
 				if StringInSlice(search[0], allowed) {
 					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
+					countTx = countTx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
 				}
 			} else {
 				tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
+				countTx = countTx.Where("name LIKE ?", "%"+value[0]+"%")
 			}
 
 		}
