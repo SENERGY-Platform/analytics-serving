@@ -71,11 +71,13 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	if appId.ID() == 0 {
 		appId = uuid.New()
 	}
+	if request.Offset != instance.Offset {
+		appId = uuid.New()
+	}
 	requestInstance, _, _ := populateInstance(uid, appId, request, userId)
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
-	requestInstance.UpdatedAt = instance.UpdatedAt
-	instance = f.update(id, userId, request, instance, uid, appId)
+	instance = f.update(id, userId, request, requestInstance, uid, appId)
 	return
 }
 
