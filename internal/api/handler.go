@@ -17,7 +17,10 @@
 package api
 
 import (
+	import_deploy_api "analytics-serving/internal/import-deploy-api"
 	"analytics-serving/internal/lib"
+	permission_api "analytics-serving/internal/permission-api"
+	pipeline_api "analytics-serving/internal/pipeline-api"
 	rancher_api "analytics-serving/internal/rancher-api"
 	rancher2_api "analytics-serving/internal/rancher2-api"
 	"log"
@@ -54,8 +57,11 @@ func CreateServer() {
 	port := lib.GetEnv("API_PORT", "8000")
 	log.Print("Starting Server at port " + port + "\n")
 	router := mux.NewRouter()
+	permission := permission_api.NewPermissionApi(lib.GetEnv("PERMISSION_API_ENDPOINT", ""))
+	pipeline := pipeline_api.NewPipelineApi(lib.GetEnv("PIPELINE_API_ENDPOINT", ""))
+	imp := import_deploy_api.NewImportDeployApi(lib.GetEnv("IMPORT_DEPLOY_API_ENDPOINT", ""))
 
-	e := NewEndpoint(driver)
+	e := NewEndpoint(driver, permission, pipeline, imp)
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
 	router.HandleFunc("/instance", e.postNewServingInstance).Methods("POST")
 	router.HandleFunc("/instance", e.getServingInstances).Methods("GET")

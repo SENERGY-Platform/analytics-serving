@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2018 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,14 @@
  * limitations under the License.
  */
 
-package lib
+package permission_api
 
-type Driver interface {
-	CreateInstance(instance *Instance, dataFields string, tagFields string) (serviceId string, err error)
-	DeleteInstance(id string) (err error)
+type Check struct {
+	Resource string         `json:"resource,omitempty"`
+	CheckIds CheckIdsObject `json:"check_ids,omitempty"`
 }
 
-type PermissionApiService interface {
-	UserHasDevicesReadAccess(ids []string, authorization string) (bool, error)
-}
-
-type PipelineApiService interface {
-	UserHasPipelineAccess(id string, authorization string) (bool, error)
-}
-
-type ImportDeployService interface {
-	UserHasImportAccess(id string, authorization string) (bool, error)
+type CheckIdsObject struct {
+	Ids    []string `json:"ids,omitempty"`
+	Rights string   `json:"rights,omitempty"`
 }

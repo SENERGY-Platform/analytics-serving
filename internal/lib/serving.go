@@ -17,6 +17,7 @@
 package lib
 
 import (
+	"errors"
 	"log"
 
 	"github.com/google/uuid"
@@ -26,25 +27,32 @@ import (
 )
 
 type Serving struct {
-	driver Driver
-	influx *Influx
+	driver              Driver
+	influx              *Influx
+	permissionService   PermissionApiService
+	pipelineService     PipelineApiService
+	importDeployService ImportDeployService
 }
 
-func NewServing(driver Driver) *Serving {
+func NewServing(driver Driver, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService) *Serving {
 	influx := NewInflux()
-	return &Serving{driver, influx}
+	return &Serving{driver, influx, permissionService, pipelineService, importDeployService}
 }
 
-func (f *Serving) CreateInstance(req ServingRequest, userId string) (instance Instance) {
+func (f *Serving) CreateInstance(req ServingRequest, userId string, token string) (instance Instance, err error) {
+	access, err := f.userHasSourceAccess(req, token)
+	if !access {
+		return
+	}
 	id := uuid.New()
 	appId := uuid.New()
-	instance = f.createInstanceWithId(id, appId, req, userId)
+	instance, err = f.createInstanceWithId(id, appId, req, userId)
 	return
 }
 
-func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) Instance {
+func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) (instance Instance, err error) {
 	instance, dataFields, tagFields := populateInstance(id, appId, req, userId)
-	err := retry(5, 5*time.Second, func() (err error) {
+	err = retry(5, 5*time.Second, func() (err error) {
 		serviceId, err := f.driver.CreateInstance(&instance, dataFields, tagFields)
 		if err == nil {
 			instance.RancherServiceId = serviceId
@@ -52,16 +60,21 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req Servin
 		return
 	})
 	if err != nil {
-		log.Println(err)
+		return
 	} else {
 		DB.NewRecord(instance)
 		DB.Create(&instance)
 		log.Println("serving - successfully created export - " + instance.ID.String())
 	}
-	return instance
+	return
 }
 
-func (f *Serving) UpdateInstance(id string, userId string, request ServingRequest) (instance Instance, errors []error) {
+func (f *Serving) UpdateInstance(id string, userId string, request ServingRequest, token string) (instance Instance, errors []error) {
+	access, err := f.userHasSourceAccess(request, token)
+	if !access {
+		errors = append(errors, err)
+		return
+	}
 	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance).GetErrors()
 	if len(errors) > 0 {
 		return
@@ -83,16 +96,16 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 
 func (f *Serving) update(id string, userId string, request ServingRequest, instance Instance, uid uuid.UUID, appId uuid.UUID) Instance {
 	err := retry(5, 5*time.Second, func() (err error) {
-		_, errors := f.DeleteInstanceForUser(id, userId)
-		if len(errors) > 1 {
-			err = errors[0]
+		_, errs := f.DeleteInstanceForUser(id, userId)
+		if len(errs) > 1 {
+			err = errs[0]
 		}
 		return err
 	})
 	if err != nil {
 		log.Println(err)
 	} else {
-		instance = f.createInstanceWithId(uid, appId, request, userId)
+		instance, _ = f.createInstanceWithId(uid, appId, request, userId)
 		log.Println("serving - successfully updated export - " + instance.ID.String())
 	}
 	return instance
@@ -196,6 +209,48 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	}
 	DB.Delete(&instance)
 	return true, errors
+}
+
+func (f *Serving) userHasSourceAccess(req ServingRequest, token string) (access bool, err error) {
+	access = false
+	switch req.FilterType {
+	case "deviceId":
+		hasAccess, e := f.permissionService.UserHasDevicesReadAccess([]string{req.Filter}, token)
+		if e != nil {
+			return access, e
+		}
+		if !hasAccess {
+			e = errors.New("serving - user does not have the rights to access the devices")
+			return access, e
+		}
+		break
+	case "operatorId":
+		hasAccess, e := f.pipelineService.UserHasPipelineAccess(strings.Split(req.Filter, ":")[1], token)
+		if e != nil {
+			e = errors.New("serving - user does not have the rights to access the pipeline: " + strings.Split(req.Filter, ":")[1])
+			return access, e
+		}
+		if !hasAccess {
+			e = errors.New("serving - user does not have the rights to access the pipeline")
+			return access, e
+		}
+		break
+	case "import_id":
+		hasAccess, e := f.importDeployService.UserHasImportAccess(req.Filter, token)
+		if e != nil {
+			e = errors.New("serving - user does not have the rights to access the import: " + req.Filter)
+			return access, e
+		}
+		if !hasAccess {
+			e = errors.New("serving - user does not have the rights to access the import")
+			return access, e
+		}
+		break
+	default:
+		return false, err
+	}
+	access = true
+	return
 }
 
 func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string, tagFields string) {

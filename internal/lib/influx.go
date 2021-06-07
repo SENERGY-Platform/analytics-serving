@@ -28,7 +28,7 @@ type Influx struct {
 
 func NewInflux() *Influx {
 	client, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
-		Addr:     "http://" + GetEnv("INFLUX_DB_HOST", "") + ":" + GetEnv("INFLUX_DB_PORT", "8086"),
+		Addr:     GetEnv("INFLUX_DB_PROTO", "http") + "://" + GetEnv("INFLUX_DB_HOST", "") + ":" + GetEnv("INFLUX_DB_PORT", "8086"),
 		Username: GetEnv("INFLUX_DB_USERNAME", "root"),
 		Password: GetEnv("INFLUX_DB_PASSWORD", ""),
 	})

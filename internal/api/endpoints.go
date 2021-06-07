@@ -31,8 +31,8 @@ type Endpoint struct {
 	serving *lib.Serving
 }
 
-func NewEndpoint(driver lib.Driver) *Endpoint {
-	ret := lib.NewServing(driver)
+func NewEndpoint(driver lib.Driver, permissionService lib.PermissionApiService, pipelineService lib.PipelineApiService, importDeployService lib.ImportDeployService) *Endpoint {
+	ret := lib.NewServing(driver, permissionService, pipelineService, importDeployService)
 	return &Endpoint{ret}
 }
 
@@ -59,10 +59,15 @@ func (e *Endpoint) postNewServingInstance(w http.ResponseWriter, req *http.Reque
 		_ = json.NewEncoder(w).Encode(map[string]map[string][]string{"validationErrors": errors})
 	} else {
 		userId, _ := getUserInfo(req)
-		instance := e.serving.CreateInstance(servingReq, userId)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(201)
-		_ = json.NewEncoder(w).Encode(instance)
+		instance, err := e.serving.CreateInstance(servingReq, userId, req.Header.Get("Authorization"))
+		if err != nil {
+			log.Println(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(201)
+			_ = json.NewEncoder(w).Encode(instance)
+		}
 	}
 }
 
@@ -83,7 +88,7 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 	} else {
 		userId, _ := getUserInfo(req)
 		vars := mux.Vars(req)
-		instance, errors := e.serving.UpdateInstance(vars["id"], userId, servingReq)
+		instance, errors := e.serving.UpdateInstance(vars["id"], userId, servingReq, req.Header.Get("Authorization"))
 		if len(errors) > 0 {
 			for _, err := range errors {
 				log.Println(err)
@@ -215,7 +220,7 @@ func getUserInfo(req *http.Request) (userId string, admin bool) {
 			userId = claims.Sub
 			admin = claims.IsAdmin()
 			if userId == "" {
-				userId = "admin"
+				userId = "dummy"
 				admin = false
 			}
 		}
