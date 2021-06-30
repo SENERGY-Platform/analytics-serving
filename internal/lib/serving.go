@@ -225,9 +225,9 @@ func (f *Serving) userHasSourceAccess(req ServingRequest, token string) (access 
 		}
 		break
 	case "operatorId":
-		hasAccess, e := f.pipelineService.UserHasPipelineAccess(strings.Split(req.Filter, ":")[1], token)
+		hasAccess, e := f.pipelineService.UserHasPipelineAccess(strings.Split(req.Filter, ":")[0], token)
 		if e != nil {
-			e = errors.New("serving - user does not have the rights to access the pipeline: " + strings.Split(req.Filter, ":")[1])
+			e = errors.New("serving - user does not have the rights to access the pipeline: " + strings.Split(req.Filter, ":")[0])
 			return access, e
 		}
 		if !hasAccess {
