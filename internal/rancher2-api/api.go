@@ -19,6 +19,7 @@ package rancher2_api
 import (
 	"analytics-serving/internal/lib"
 	"errors"
+	"log"
 	"net/http"
 
 	"crypto/tls"
@@ -84,11 +85,12 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string, tag
 		Selector:   Selector{MatchLabels: map[string]string{"exportId": instance.ID.String()}},
 	}
 	resp, _, e := request.Post(r.url + "projects/" + r.projectId + "/workloads").Send(reqBody).End()
-	if resp.StatusCode != http.StatusCreated {
+	if len(e) > 0 {
+		log.Println("ERROR:",e)
 		err = errors.New("could not create export")
 		return
 	}
-	if len(e) > 0 {
+	if resp.StatusCode != http.StatusCreated {
 		err = errors.New("could not create export")
 		return
 	}
