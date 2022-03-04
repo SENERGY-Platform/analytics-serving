@@ -19,7 +19,6 @@ package rancher2_api
 import (
 	"analytics-serving/internal/lib"
 	"errors"
-	"log"
 	"net/http"
 
 	"crypto/tls"
@@ -76,7 +75,7 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string, tag
 		Containers: []Container{{
 			Image:           lib.GetEnv("TRANSFER_IMAGE", "fgseitsrancher.wifa.intern.uni-leipzig.de:5000/kafka-influx:unstable"),
 			Name:            "kafka2influx",
-			Environment:     env,
+			Env:             env,
 			ImagePullPolicy: "Always",
 			Resources:       Resources{Limits: Limits{Cpu: "0.1"}},
 		}},
@@ -86,7 +85,6 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string, tag
 	}
 	resp, _, e := request.Post(r.url + "projects/" + r.projectId + "/workloads").Send(reqBody).End()
 	if len(e) > 0 {
-		log.Println("ERROR:",e)
 		err = errors.New("could not create export")
 		return
 	}
