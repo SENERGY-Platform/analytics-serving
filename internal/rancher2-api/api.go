@@ -68,6 +68,14 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string, tag
 		env["DATA_FILTER_ID_MAPPING"] = "import_id"
 	}
 
+	var r2Env []Env
+	for k, v := range env {
+		r2Env = append(r2Env, Env{
+			Name:  k,
+			Value: v,
+		})
+	}
+
 	request := gorequest.New().SetBasicAuth(r.accessKey, r.secretKey).TLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	reqBody := &Request{
 		Name:        r.getInstanceName(instance.ID.String()),
@@ -75,7 +83,7 @@ func (r *Rancher2) CreateInstance(instance *lib.Instance, dataFields string, tag
 		Containers: []Container{{
 			Image:           lib.GetEnv("TRANSFER_IMAGE", "fgseitsrancher.wifa.intern.uni-leipzig.de:5000/kafka-influx:unstable"),
 			Name:            "kafka2influx",
-			Env:             env,
+			Env:             r2Env,
 			ImagePullPolicy: "Always",
 			Resources:       Resources{Limits: Limits{Cpu: "0.1"}},
 		}},
