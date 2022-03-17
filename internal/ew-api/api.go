@@ -58,10 +58,16 @@ func NewExportWorker(filterTopic string) *ExportWorker {
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
 	mappings := map[string]string{}
 	if dataFields != "" {
-		addMappings(mappings, &dataFields, MappingData)
+		err = addMappings(mappings, &dataFields, MappingData)
+		if err != nil {
+			return "", err
+		}
 	}
 	if tagFields != "" {
-		addMappings(mappings, &tagFields, MappingExtra)
+		err = addMappings(mappings, &tagFields, MappingExtra)
+		if err != nil {
+			return "", err
+		}
 	}
 	if instance.TimePath != "" {
 		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = instance.TimePath
