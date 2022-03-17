@@ -102,7 +102,8 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		},
 		Timestamp: time.Now().Format(TimeFormat),
 	}
-	jsonByte, err := json.Marshal(&message)
+	var jsonByte []byte
+	jsonByte, err = json.Marshal(&message)
 	if err != nil {
 		return "", err
 	}
