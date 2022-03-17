@@ -112,8 +112,20 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 }
 
 func (ew *ExportWorker) DeleteInstance(id string) (err error) {
-	//TODO implement me
-	panic("implement me")
+	message := Message{
+		Method: MethodDelete,
+		Payload: Filter{
+			ExportID: id,
+		},
+		Timestamp: time.Now().Format(TimeFormat),
+	}
+	var jsonByte []byte
+	jsonByte, err = json.Marshal(&message)
+	if err != nil {
+		return
+	}
+	fmt.Println(string(jsonByte))
+	return
 }
 
 func addIdentifier(identifiers *[]Identifier, key string, value string) {
