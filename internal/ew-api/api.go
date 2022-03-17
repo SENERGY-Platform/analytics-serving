@@ -25,13 +25,19 @@ import (
 )
 
 const (
-	TypeDevice      = "deviceId"
-	TypeAnalytics   = "operatorId"
-	TypeImport      = "import_id"
-	InfluxDBTimeKey = "time"
-	MappingData     = ":data"
-	MappingExtra    = ":extra"
-	TimeFormat      = "2006-01-02T15:04:05.999Z"
+	TypeDevice        = "deviceId"
+	TypeAnalytics     = "operatorId"
+	TypeImport        = "import_id"
+	InfluxDBTimeKey   = "time"
+	MappingData       = ":data"
+	MappingExtra      = ":extra"
+	MappingTypeString = ":string"
+	IdentKeyDevice    = "device_id"
+	IdentKeyService   = "service_id"
+	IdentKeyPipeline  = "pipeline_id"
+	IdentKeyOperator  = "operator_id"
+	IdentKeyImport    = "import_id"
+	TimeFormat        = "2006-01-02T15:04:05.999Z"
 )
 
 type InfluxDBExportArgs struct {
@@ -72,19 +78,19 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		}
 	}
 	if instance.TimePath != "" {
-		mappings[InfluxDBTimeKey+":string"+MappingExtra] = instance.TimePath
+		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = instance.TimePath
 	}
 	var identifiers []Identifier
 	switch instance.FilterType {
 	case TypeDevice:
-		addIdentifier(&identifiers, "device_id", instance.Filter)
-		addIdentifier(&identifiers, "service_id", strings.ReplaceAll(instance.Topic, "_", ":"))
+		addIdentifier(&identifiers, IdentKeyDevice, instance.Filter)
+		addIdentifier(&identifiers, IdentKeyService, strings.ReplaceAll(instance.Topic, "_", ":"))
 	case TypeAnalytics:
 		values := strings.Split(instance.Filter, ":")
-		addIdentifier(&identifiers, "pipeline_id", values[0])
-		addIdentifier(&identifiers, "operator_id", values[1])
+		addIdentifier(&identifiers, IdentKeyPipeline, values[0])
+		addIdentifier(&identifiers, IdentKeyOperator, values[1])
 	case TypeImport:
-		addIdentifier(&identifiers, "import_id", instance.Filter)
+		addIdentifier(&identifiers, IdentKeyImport, instance.Filter)
 	}
 	exportArgs := InfluxDBExportArgs{
 		DBName:  instance.Database,
