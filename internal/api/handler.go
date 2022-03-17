@@ -17,17 +17,18 @@
 package api
 
 import (
+	ew_api "analytics-serving/internal/ew-api"
 	import_deploy_api "analytics-serving/internal/import-deploy-api"
 	"analytics-serving/internal/lib"
 	permission_api "analytics-serving/internal/permission-api"
 	pipeline_api "analytics-serving/internal/pipeline-api"
 	rancher_api "analytics-serving/internal/rancher-api"
 	rancher2_api "analytics-serving/internal/rancher2-api"
-	"log"
-	"net/http"
-
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/segmentio/kafka-go"
+	"log"
+	"net/http"
 )
 
 func CreateServer() {
