@@ -122,13 +122,14 @@ func addIdentifier(identifiers *[]Identifier, key string, value string) {
 	})
 }
 
-func addMappings(mappings map[string]string, fields *string, mappingType string) {
+func addMappings(mappings map[string]string, fields *string, mappingType string) (err error) {
 	fieldsMap := map[string]string{}
-	err := json.Unmarshal([]byte(*fields), &fieldsMap)
+	err = json.Unmarshal([]byte(*fields), &fieldsMap)
 	if err != nil {
 		return
 	}
 	for key, val := range fieldsMap {
 		mappings[key+mappingType] = val
 	}
+	return
 }
