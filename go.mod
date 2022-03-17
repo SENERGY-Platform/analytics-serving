@@ -19,8 +19,8 @@ require (
 	github.com/parnurzeal/gorequest v0.2.15
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/rs/cors v1.7.0
+	github.com/segmentio/kafka-go v0.4.30
 	github.com/smartystreets/goconvey v1.6.4 // indirect
-	github.com/stretchr/testify v1.5.1 // indirect
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
 )

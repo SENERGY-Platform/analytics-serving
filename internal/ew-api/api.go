@@ -18,8 +18,9 @@ package ew_api
 
 import (
 	"analytics-serving/internal/lib"
+	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/segmentio/kafka-go"
 	"strings"
 	"time"
 )
@@ -47,11 +48,11 @@ type InfluxDBExportArgs struct {
 }
 
 type ExportWorker struct {
-	filterTopic string
+	kafkaProducer *kafka.Writer
 }
 
-func NewExportWorker(filterTopic string) *ExportWorker {
-	return &ExportWorker{filterTopic}
+func NewExportWorker(kafkaProducer *kafka.Writer) *ExportWorker {
+	return &ExportWorker{kafkaProducer}
 }
 
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
@@ -106,7 +107,10 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(string(jsonByte))
+	err = ew.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
+		Key:   []byte(instance.Measurement),
+		Value: jsonByte,
+	})
 	return "", err
 }
 
@@ -123,7 +127,10 @@ func (ew *ExportWorker) DeleteInstance(id string) (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Println(string(jsonByte))
+	err = ew.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
+		Key:   []byte(id),
+		Value: jsonByte,
+	})
 	return
 }
 
