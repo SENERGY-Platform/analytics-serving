@@ -37,7 +37,6 @@ const (
 	IdentKeyPipeline  = "pipeline_id"
 	IdentKeyOperator  = "operator_id"
 	IdentKeyImport    = "import_id"
-	TimeFormat        = "2006-01-02T15:04:05.999Z"
 )
 
 type InfluxDBExportArgs struct {
@@ -100,7 +99,7 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 			ExportID:    instance.Measurement,
 			ExportArgs:  exportArgs,
 		},
-		Timestamp: time.Now().Format(TimeFormat),
+		Timestamp: time.Now().UTC().Unix(),
 	}
 	var jsonByte []byte
 	jsonByte, err = json.Marshal(&message)
@@ -117,7 +116,7 @@ func (ew *ExportWorker) DeleteInstance(id string) (err error) {
 		Payload: Filter{
 			ExportID: id,
 		},
-		Timestamp: time.Now().Format(TimeFormat),
+		Timestamp: time.Now().UTC().Unix(),
 	}
 	var jsonByte []byte
 	jsonByte, err = json.Marshal(&message)

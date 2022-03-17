@@ -24,7 +24,7 @@ const (
 type Message struct {
 	Method    string `json:"method"`
 	Payload   Filter `json:"payload"`
-	Timestamp string `json:"timestamp"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type Filter struct {
