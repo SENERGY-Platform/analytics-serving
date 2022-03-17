@@ -77,29 +77,14 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 	var identifiers []Identifier
 	switch instance.FilterType {
 	case TypeDevice:
-		identifiers = append(identifiers, Identifier{
-			Key:   "device_id",
-			Value: instance.Filter,
-		})
-		identifiers = append(identifiers, Identifier{
-			Key:   "service_id",
-			Value: strings.ReplaceAll(instance.Topic, "_", ":"),
-		})
+		addIdentifier(&identifiers, "device_id", instance.Filter)
+		addIdentifier(&identifiers, "service_id", strings.ReplaceAll(instance.Topic, "_", ":"))
 	case TypeAnalytics:
 		values := strings.Split(instance.Filter, ":")
-		identifiers = append(identifiers, Identifier{
-			Key:   "pipeline_id",
-			Value: values[0],
-		})
-		identifiers = append(identifiers, Identifier{
-			Key:   "operator_id",
-			Value: values[1],
-		})
+		addIdentifier(&identifiers, "pipeline_id", values[0])
+		addIdentifier(&identifiers, "operator_id", values[1])
 	case TypeImport:
-		identifiers = append(identifiers, Identifier{
-			Key:   "import_id",
-			Value: instance.Filter,
-		})
+		addIdentifier(&identifiers, "import_id", instance.Filter)
 	}
 	exportArgs := InfluxDBExportArgs{
 		DBName:  instance.Database,
@@ -130,4 +115,11 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 func (ew *ExportWorker) DeleteInstance(id string) (err error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func addIdentifier(identifiers *[]Identifier, key string, value string) {
+	*identifiers = append(*identifiers, Identifier{
+		Key:   key,
+		Value: value,
+	})
 }
