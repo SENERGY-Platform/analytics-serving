@@ -58,24 +58,10 @@ func NewExportWorker(filterTopic string) *ExportWorker {
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
 	mappings := map[string]string{}
 	if dataFields != "" {
-		dataMappings := map[string]string{}
-		err := json.Unmarshal([]byte(dataFields), &dataMappings)
-		if err != nil {
-			return "", err
-		}
-		for key, val := range dataMappings {
-			mappings[key+MappingData] = val
-		}
+		addMappings(mappings, &dataFields, MappingData)
 	}
 	if tagFields != "" {
-		extraMappings := map[string]string{}
-		err := json.Unmarshal([]byte(tagFields), &extraMappings)
-		if err != nil {
-			return "", err
-		}
-		for key, val := range extraMappings {
-			mappings[key+MappingExtra] = val
-		}
+		addMappings(mappings, &tagFields, MappingExtra)
 	}
 	if instance.TimePath != "" {
 		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = instance.TimePath
@@ -128,4 +114,15 @@ func addIdentifier(identifiers *[]Identifier, key string, value string) {
 		Key:   key,
 		Value: value,
 	})
+}
+
+func addMappings(mappings map[string]string, fields *string, mappingType string) {
+	fieldsMap := map[string]string{}
+	err := json.Unmarshal([]byte(*fields), &fieldsMap)
+	if err != nil {
+		return
+	}
+	for key, val := range fieldsMap {
+		mappings[key+mappingType] = val
+	}
 }
