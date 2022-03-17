@@ -24,7 +24,15 @@ import (
 	"time"
 )
 
-const InfluxDBTimeKey = "time"
+const (
+	TypeDevice      = "deviceId"
+	TypeAnalytics   = "operatorId"
+	TypeImport      = "import_id"
+	InfluxDBTimeKey = "time"
+	MappingData     = ":data"
+	MappingExtra    = ":extra"
+	TimeFormat      = "2006-01-02T15:04:05.999Z"
+)
 
 type InfluxDBExportArgs struct {
 	DBName        string `json:"db_name"`
@@ -32,19 +40,6 @@ type InfluxDBExportArgs struct {
 	TimeFormat    string `json:"time_format,omitempty"`
 	TimePrecision string `json:"time_precision,omitempty"`
 }
-
-const (
-	TypeDevice    = "deviceId"
-	TypeAnalytics = "operatorId"
-	TypeImport    = "import_id"
-)
-
-const TimeFormat = "2006-01-02T15:04:05.999Z"
-
-const (
-	MappingData  = ":data"
-	MappingExtra = ":extra"
-)
 
 type ExportWorker struct {
 	filterTopic string
