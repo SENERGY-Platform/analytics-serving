@@ -28,11 +28,11 @@ type Message struct {
 }
 
 type Filter struct {
-	Source      string            `json:"source"`
-	Identifiers []Identifier      `json:"identifiers"`
-	Mappings    map[string]string `json:"mappings"`
+	Source      string            `json:"source,omitempty"`
+	Identifiers []Identifier      `json:"identifiers,omitempty"`
+	Mappings    map[string]string `json:"mappings,omitempty"`
 	ExportID    string            `json:"export_id"`
-	ExportArgs  interface{}       `json:"export_args"`
+	ExportArgs  interface{}       `json:"export_args,omitempty"`
 }
 
 type Identifier struct {
