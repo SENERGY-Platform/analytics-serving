@@ -54,11 +54,6 @@ func NewExportWorker(filterTopic string) *ExportWorker {
 	return &ExportWorker{filterTopic}
 }
 
-func GetTimestamp() string {
-	t := time.Time{}
-	return t.Format(TimeFormat)
-}
-
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
 	mappings := map[string]string{}
 	if dataFields != "" {
@@ -127,7 +122,7 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 			ExportID:    instance.Measurement,
 			ExportArgs:  exportArgs,
 		},
-		Timestamp: GetTimestamp(),
+		Timestamp: time.Now().Format(TimeFormat),
 	}
 	jsonByte, err := json.Marshal(&message)
 	if err != nil {
