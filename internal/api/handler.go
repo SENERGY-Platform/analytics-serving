@@ -50,6 +50,13 @@ func CreateServer() {
 			lib.GetEnv("RANCHER2_NAMESPACE_ID", ""),
 			lib.GetEnv("RANCHER2_PROJECT_ID", ""),
 		)
+	case "ew":
+		log.Println("using export-worker driver")
+		kafkaProducer := kafka.Writer{
+			Addr:  kafka.TCP(lib.GetEnv("KAFKA_BROKER", "")),
+			Topic: lib.GetEnv("EW_FILTER_TOPIC", ""),
+		}
+		driver = ew_api.NewExportWorker(&kafkaProducer)
 	default:
 		log.Println("No driver selected")
 	}
