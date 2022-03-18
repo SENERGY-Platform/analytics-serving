@@ -42,7 +42,7 @@ const (
 
 type InfluxDBExportArgs struct {
 	DBName        string `json:"db_name"`
-	TimeKey       string `json:"time_key"`
+	TimeKey       string `json:"time_key,omitempty"`
 	TimeFormat    string `json:"time_format,omitempty"`
 	TimePrecision string `json:"time_precision,omitempty"`
 }
