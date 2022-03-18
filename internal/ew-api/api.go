@@ -69,9 +69,6 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 			return "", err
 		}
 	}
-	if instance.TimePath != "" {
-		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = instance.TimePath
-	}
 	var identifiers []Identifier
 	switch instance.FilterType {
 	case TypeDevice:
@@ -84,9 +81,10 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 	case TypeImport:
 		addIdentifier(&identifiers, IdentKeyImport, instance.Filter)
 	}
-	exportArgs := InfluxDBExportArgs{
-		DBName:  instance.Database,
-		TimeKey: InfluxDBTimeKey,
+	exportArgs := InfluxDBExportArgs{DBName: instance.Database}
+	if instance.TimePath != "" {
+		exportArgs.TimeKey = InfluxDBTimeKey
+		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = instance.TimePath
 	}
 	if instance.TimePrecision != nil && *instance.TimePrecision != "" {
 		exportArgs.TimePrecision = *instance.TimePrecision
