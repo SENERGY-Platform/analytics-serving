@@ -95,8 +95,8 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 			Source:      instance.Topic,
 			Identifiers: identifiers,
 			Mappings:    mappings,
-			ExportID:    instance.Measurement,
-			ExportArgs:  exportArgs,
+			ID:          instance.Measurement,
+			Args:        exportArgs,
 		},
 		Timestamp: time.Now().UTC().Unix(),
 	}
@@ -116,7 +116,7 @@ func (ew *ExportWorker) DeleteInstance(id string) (err error) {
 	message := Message{
 		Method: MethodDelete,
 		Payload: Filter{
-			ExportID: id,
+			ID: id,
 		},
 		Timestamp: time.Now().UTC().Unix(),
 	}

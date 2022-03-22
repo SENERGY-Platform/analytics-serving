@@ -31,8 +31,8 @@ type Filter struct {
 	Source      string            `json:"source,omitempty"`
 	Identifiers []Identifier      `json:"identifiers,omitempty"`
 	Mappings    map[string]string `json:"mappings,omitempty"`
-	ExportID    string            `json:"export_id"`
-	ExportArgs  interface{}       `json:"export_args,omitempty"`
+	ID          string            `json:"id"`
+	Args        interface{}       `json:"args,omitempty"`
 }
 
 type Identifier struct {
