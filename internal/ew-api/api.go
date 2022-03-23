@@ -56,39 +56,16 @@ func NewExportWorker(kafkaProducer *kafka.Writer) *ExportWorker {
 }
 
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
+	serviceId = ""
 	mappings := map[string]string{}
-	if dataFields != "" {
-		err = addMappings(mappings, &dataFields, MappingData)
-		if err != nil {
-			return "", err
-		}
-	}
-	if tagFields != "" {
-		err = addMappings(mappings, &tagFields, MappingExtra)
-		if err != nil {
-			return "", err
-		}
+	err = genMappings(mappings, &dataFields, &tagFields, instance.TimePath)
+	if err != nil {
+		return
 	}
 	var identifiers []Identifier
-	switch instance.FilterType {
-	case TypeDevice:
-		addIdentifier(&identifiers, IdentKeyDevice, instance.Filter)
-		addIdentifier(&identifiers, IdentKeyService, strings.ReplaceAll(instance.Topic, "_", ":"))
-	case TypeAnalytics:
-		values := strings.Split(instance.Filter, ":")
-		addIdentifier(&identifiers, IdentKeyPipeline, values[0])
-		addIdentifier(&identifiers, IdentKeyOperator, values[1])
-	case TypeImport:
-		addIdentifier(&identifiers, IdentKeyImport, instance.Filter)
-	}
-	exportArgs := InfluxDBExportArgs{DBName: instance.Database}
-	if instance.TimePath != "" {
-		exportArgs.TimeKey = InfluxDBTimeKey
-		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = instance.TimePath
-	}
-	if instance.TimePrecision != nil && *instance.TimePrecision != "" {
-		exportArgs.TimePrecision = *instance.TimePrecision
-	}
+	genIdentifiers(&identifiers, instance.FilterType, instance.Filter, instance.Topic)
+	var exportArgs InfluxDBExportArgs
+	genInfluxExportArgs(&exportArgs, instance.Database, instance.TimePath, instance.TimePrecision)
 	message := Message{
 		Method: MethodPut,
 		Payload: Filter{
@@ -100,16 +77,8 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		},
 		Timestamp: time.Now().UTC().Unix(),
 	}
-	var jsonByte []byte
-	jsonByte, err = json.Marshal(&message)
-	if err != nil {
-		return "", err
-	}
-	err = ew.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
-		Key:   []byte(instance.Measurement),
-		Value: jsonByte,
-	})
-	return "", err
+	err = ew.publish(&message, instance.Measurement)
+	return
 }
 
 func (ew *ExportWorker) DeleteInstance(id string) (err error) {
@@ -120,13 +89,18 @@ func (ew *ExportWorker) DeleteInstance(id string) (err error) {
 		},
 		Timestamp: time.Now().UTC().Unix(),
 	}
+	err = ew.publish(&message, id)
+	return
+}
+
+func (ew *ExportWorker) publish(message *Message, key string) (err error) {
 	var jsonByte []byte
-	jsonByte, err = json.Marshal(&message)
+	jsonByte, err = json.Marshal(message)
 	if err != nil {
 		return
 	}
 	err = ew.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
-		Key:   []byte(id),
+		Key:   []byte(key),
 		Value: jsonByte,
 	})
 	return
@@ -139,6 +113,20 @@ func addIdentifier(identifiers *[]Identifier, key string, value string) {
 	})
 }
 
+func genIdentifiers(identifiers *[]Identifier, filterType string, filter string, topic string) {
+	switch filterType {
+	case TypeDevice:
+		addIdentifier(identifiers, IdentKeyDevice, filter)
+		addIdentifier(identifiers, IdentKeyService, strings.ReplaceAll(topic, "_", ":"))
+	case TypeAnalytics:
+		values := strings.Split(filter, ":")
+		addIdentifier(identifiers, IdentKeyPipeline, values[0])
+		addIdentifier(identifiers, IdentKeyOperator, values[1])
+	case TypeImport:
+		addIdentifier(identifiers, IdentKeyImport, filter)
+	}
+}
+
 func addMappings(mappings map[string]string, fields *string, mappingType string) (err error) {
 	fieldsMap := map[string]string{}
 	err = json.Unmarshal([]byte(*fields), &fieldsMap)
@@ -149,4 +137,27 @@ func addMappings(mappings map[string]string, fields *string, mappingType string)
 		mappings[key+mappingType] = val
 	}
 	return
+}
+
+func genMappings(mappings map[string]string, dataFields *string, tagFields *string, timePath string) (err error) {
+	if *dataFields != "" {
+		err = addMappings(mappings, dataFields, MappingData)
+	}
+	if *tagFields != "" {
+		err = addMappings(mappings, tagFields, MappingExtra)
+	}
+	if timePath != "" {
+		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = timePath
+	}
+	return
+}
+
+func genInfluxExportArgs(args *InfluxDBExportArgs, dbName string, timePath string, timePrecision *string) {
+	args.DBName = dbName
+	if timePath != "" {
+		args.TimeKey = InfluxDBTimeKey
+	}
+	if timePrecision != nil && *timePrecision != "" {
+		args.TimePrecision = *timePrecision
+	}
 }
