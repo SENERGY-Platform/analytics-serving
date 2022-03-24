@@ -32,6 +32,7 @@ import (
 )
 
 func CreateServer() {
+	var err error
 	var driver lib.Driver
 	switch selectedDriver := lib.GetEnv("DRIVER", "rancher"); selectedDriver {
 	case "rancher":
@@ -53,10 +54,15 @@ func CreateServer() {
 		)
 	case "ew":
 		log.Println("using export-worker driver")
+		err = ew_api.InitTopic(lib.GetEnv("KAFKA_BROKER", ""), lib.GetEnv("EW_FILTER_TOPIC", ""))
 		kafkaProducer := kafka.Writer{
-			Addr:  kafka.TCP(lib.GetEnv("KAFKA_BROKER", "")),
-			Topic: lib.GetEnv("EW_FILTER_TOPIC", ""),
+			Addr:        kafka.TCP(lib.GetEnv("KAFKA_BROKER", "")),
+			Topic:       lib.GetEnv("EW_FILTER_TOPIC", ""),
+			MaxAttempts: 5,
 		}
+		defer func(kafkaProducer *kafka.Writer) {
+			_ = kafkaProducer.Close()
+		}(&kafkaProducer)
 		driver = ew_api.NewExportWorker(&kafkaProducer)
 	default:
 		log.Println("No driver selected")
@@ -88,5 +94,9 @@ func CreateServer() {
 	handler := c.Handler(router)
 	logger := lib.NewLogger(handler, lib.GetEnv("LOG_LEVEL", "CALL"))
 	defer logger.CloseLogFile()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 	log.Fatal(http.ListenAndServe(lib.GetEnv("SERVERNAME", "")+":"+port, logger))
 }
