@@ -34,7 +34,8 @@ import (
 func CreateServer() {
 	var err error
 	var driver lib.Driver
-	switch selectedDriver := lib.GetEnv("DRIVER", "rancher"); selectedDriver {
+	selectedDriver := lib.GetEnv("DRIVER", "rancher")
+	switch selectedDriver {
 	case "rancher":
 		log.Println("using rancher driver")
 		driver = rancher_api.NewRancher(
