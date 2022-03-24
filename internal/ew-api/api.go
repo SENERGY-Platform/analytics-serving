@@ -21,6 +21,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/segmentio/kafka-go"
+	"log"
+	"net"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -160,4 +163,74 @@ func genInfluxExportArgs(args *InfluxDBExportArgs, dbName string, timePath strin
 	if timePrecision != nil && *timePrecision != "" {
 		args.TimePrecision = *timePrecision
 	}
+}
+
+func InitTopic(addr string, topic string) (err error) {
+	var conn *kafka.Conn
+	conn, err = kafka.Dial("tcp", addr)
+	if err != nil {
+		return
+	}
+	defer func(conn *kafka.Conn) {
+		_ = conn.Close()
+	}(conn)
+	var partitions []kafka.Partition
+	partitions, err = conn.ReadPartitions()
+	if err != nil {
+		return
+	}
+	for _, p := range partitions {
+		if p.Topic == topic {
+			return
+		}
+	}
+	var controller kafka.Broker
+	controller, err = conn.Controller()
+	if err != nil {
+		return
+	}
+	log.Println("topic '" + topic + "' does not exist, creating ...")
+	var controllerConn *kafka.Conn
+	controllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+	if err != nil {
+		panic(err.Error())
+	}
+	defer func(controllerConn *kafka.Conn) {
+		_ = controllerConn.Close()
+	}(controllerConn)
+	topicConfigs := []kafka.TopicConfig{
+		{
+			Topic:             topic,
+			NumPartitions:     1,
+			ReplicationFactor: 2,
+			ConfigEntries: []kafka.ConfigEntry{
+				{
+					ConfigName:  "retention.ms",
+					ConfigValue: "-1",
+				},
+				{
+					ConfigName:  "retention.bytes",
+					ConfigValue: "-1",
+				},
+				{
+					ConfigName:  "cleanup.policy",
+					ConfigValue: "compact",
+				},
+				{
+					ConfigName:  "delete.retention.ms",
+					ConfigValue: "86400000",
+				},
+				{
+					ConfigName:  "segment.ms",
+					ConfigValue: "604800000",
+				},
+				{
+					ConfigName:  "min.cleanable.dirty.ratio",
+					ConfigValue: "0.1",
+				},
+			},
+		},
+	}
+	err = controllerConn.CreateTopics(topicConfigs...)
+	return
 }
