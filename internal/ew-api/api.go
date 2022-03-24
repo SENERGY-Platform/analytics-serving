@@ -20,6 +20,8 @@ import (
 	"analytics-serving/internal/lib"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"net"
@@ -165,7 +167,7 @@ func genInfluxExportArgs(args *InfluxDBExportArgs, dbName string, timePath strin
 	}
 }
 
-func InitTopic(addr string, topic string) (err error) {
+func InitTopic(addr string, topic string, serving *lib.Serving) (err error) {
 	var conn *kafka.Conn
 	conn, err = kafka.Dial("tcp", addr)
 	if err != nil {
@@ -232,5 +234,25 @@ func InitTopic(addr string, topic string) (err error) {
 		},
 	}
 	err = controllerConn.CreateTopics(topicConfigs...)
+	if err != nil {
+		return
+	}
+	log.Println("topic created")
+	instances, _, errs := serving.GetInstances("", map[string][]string{}, true)
+	if len(errs) > 0 {
+		log.Println(errs)
+		err = errors.New("getting instances failed")
+		return
+	}
+	if len(instances) > 0 {
+		log.Println(fmt.Sprintf("found %d instances, publishing ...", len(instances)))
+		for _, instance := range instances {
+			err = serving.CreateFromInstance(&instance)
+			if err != nil {
+				return
+			}
+		}
+		log.Println("instances published")
+	}
 	return
 }
