@@ -214,6 +214,22 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	return true, errors
 }
 
+func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
+	var servingRequestValues []ServingRequestValue
+	for _, value := range instance.Values {
+		servingRequestValues = append(servingRequestValues, ServingRequestValue{
+			Name: value.Name,
+			Type: value.Type,
+			Path: value.Path,
+			Tag:  value.Tag,
+		})
+	}
+	var dataFields, tagFields string
+	_, dataFields, tagFields = transformServingValues(instance.ID, servingRequestValues)
+	instance.RancherServiceId, err = f.driver.CreateInstance(instance, dataFields, tagFields)
+	return
+}
+
 func (f *Serving) userHasSourceAccess(req ServingRequest, token string) (access bool, err error) {
 	access = false
 	switch req.FilterType {
