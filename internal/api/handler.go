@@ -56,7 +56,7 @@ func CreateServer() {
 	case "ew":
 		log.Println("using export-worker driver")
 		kafkaProducer := kafka.Writer{
-			Addr:        kafka.TCP(lib.GetEnv("KAFKA_BROKER", "")),
+			Addr:        kafka.TCP(lib.GetEnv("KAFKA_BOOTSTRAP", "")),
 			Topic:       lib.GetEnv("EW_FILTER_TOPIC", ""),
 			MaxAttempts: 5,
 		}
@@ -77,7 +77,7 @@ func CreateServer() {
 
 	e := NewEndpoint(driver, permission, pipeline, imp)
 	if selectedDriver == "ew" {
-		err = ew_api.InitTopic(lib.GetEnv("KAFKA_BROKER", ""), lib.GetEnv("EW_FILTER_TOPIC", ""), e.serving)
+		err = ew_api.InitTopic(lib.GetEnv("KAFKA_BOOTSTRAP", ""), lib.GetEnv("EW_FILTER_TOPIC", ""), e.serving)
 	}
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
 	router.HandleFunc("/instance", e.postNewServingInstance).Methods("POST")
