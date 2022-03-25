@@ -44,11 +44,20 @@ const (
 	IdentKeyImport   = "import_id"
 )
 
+var typeMap = map[string]string{
+	"string":      ":string",
+	"float":       ":number",
+	"int":         ":integer",
+	"bool":        ":boolean",
+	"string_json": "object:string",
+}
+
 type InfluxDBExportArgs struct {
-	DBName        string `json:"db_name"`
-	TimeKey       string `json:"time_key,omitempty"`
-	TimeFormat    string `json:"time_format,omitempty"`
-	TimePrecision string `json:"time_precision,omitempty"`
+	DBName        string            `json:"db_name"`
+	TypeCasts     map[string]string `json:"type_casts,omitempty"`
+	TimeKey       string            `json:"time_key,omitempty"`
+	TimeFormat    string            `json:"time_format,omitempty"`
+	TimePrecision string            `json:"time_precision,omitempty"`
 }
 
 type ExportWorker struct {
@@ -62,13 +71,14 @@ func NewExportWorker(kafkaProducer *kafka.Writer) *ExportWorker {
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
 	serviceId = ""
 	mappings := map[string]string{}
-	err = genMappings(mappings, &dataFields, &tagFields, instance.TimePath)
+	castMap := map[string]string{}
+	err = genMappings(mappings, &dataFields, &tagFields, instance.TimePath, castMap)
 	if err != nil {
 		return
 	}
 	var identifiers []Identifier
 	genIdentifiers(&identifiers, instance.FilterType, instance.Filter, instance.Topic)
-	var exportArgs InfluxDBExportArgs
+	exportArgs := InfluxDBExportArgs{TypeCasts: castMap}
 	genInfluxExportArgs(&exportArgs, instance.Database, instance.TimePath, instance.TimePrecision)
 	message := Message{
 		Method: MethodPut,
@@ -131,24 +141,26 @@ func genIdentifiers(identifiers *[]Identifier, filterType string, filter string,
 	}
 }
 
-func addMappings(mappings map[string]string, fields *string, mappingType string) (err error) {
+func addMappings(mappings map[string]string, fields *string, mappingType string, castMap map[string]string) (err error) {
 	fieldsMap := map[string]string{}
 	err = json.Unmarshal([]byte(*fields), &fieldsMap)
 	if err != nil {
 		return
 	}
 	for key, val := range fieldsMap {
-		mappings[key+mappingType] = val
+		dst := strings.Split(key, ":")
+		mappings[dst[0]+mappingType] = val
+		castMap[dst[0]] = typeMap[dst[1]]
 	}
 	return
 }
 
-func genMappings(mappings map[string]string, dataFields *string, tagFields *string, timePath string) (err error) {
+func genMappings(mappings map[string]string, dataFields *string, tagFields *string, timePath string, castMap map[string]string) (err error) {
 	if *dataFields != "" {
-		err = addMappings(mappings, dataFields, MappingData)
+		err = addMappings(mappings, dataFields, MappingData, castMap)
 	}
 	if *tagFields != "" {
-		err = addMappings(mappings, tagFields, MappingExtra)
+		err = addMappings(mappings, tagFields, MappingExtra, castMap)
 	}
 	if timePath != "" {
 		mappings[InfluxDBTimeKey+MappingExtra] = timePath
