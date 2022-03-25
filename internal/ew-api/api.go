@@ -31,18 +31,17 @@ import (
 )
 
 const (
-	TypeDevice        = "deviceId"
-	TypeAnalytics     = "operatorId"
-	TypeImport        = "import_id"
-	InfluxDBTimeKey   = "time"
-	MappingData       = ":data"
-	MappingExtra      = ":extra"
-	MappingTypeString = ":string"
-	IdentKeyDevice    = "device_id"
-	IdentKeyService   = "service_id"
-	IdentKeyPipeline  = "pipeline_id"
-	IdentKeyOperator  = "operator_id"
-	IdentKeyImport    = "import_id"
+	TypeDevice       = "deviceId"
+	TypeAnalytics    = "operatorId"
+	TypeImport       = "import_id"
+	InfluxDBTimeKey  = "time"
+	MappingData      = ":data"
+	MappingExtra     = ":extra"
+	IdentKeyDevice   = "device_id"
+	IdentKeyService  = "service_id"
+	IdentKeyPipeline = "pipeline_id"
+	IdentKeyOperator = "operator_id"
+	IdentKeyImport   = "import_id"
 )
 
 type InfluxDBExportArgs struct {
@@ -152,7 +151,7 @@ func genMappings(mappings map[string]string, dataFields *string, tagFields *stri
 		err = addMappings(mappings, tagFields, MappingExtra)
 	}
 	if timePath != "" {
-		mappings[InfluxDBTimeKey+MappingTypeString+MappingExtra] = timePath
+		mappings[InfluxDBTimeKey+MappingExtra] = timePath
 	}
 	return
 }
