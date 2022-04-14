@@ -21,249 +21,87 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/segmentio/kafka-go"
-	"log"
-	"net"
-	"strconv"
-	"strings"
 	"time"
 )
 
-const (
-	TypeDevice       = "deviceId"
-	TypeAnalytics    = "operatorId"
-	TypeImport       = "import_id"
-	InfluxDBTimeKey  = "time"
-	MappingData      = ":data"
-	MappingExtra     = ":extra"
-	IdentKeyDevice   = "device_id"
-	IdentKeyService  = "service_id"
-	IdentKeyPipeline = "pipeline_id"
-	IdentKeyOperator = "operator_id"
-	IdentKeyImport   = "import_id"
-)
-
-var typeMap = map[string]string{
-	"string":      ":string",
-	"float":       ":number",
-	"int":         ":integer",
-	"bool":        ":boolean",
-	"string_json": "object:string",
-}
-
-type InfluxDBExportArgs struct {
-	DBName        string            `json:"db_name"`
-	TypeCasts     map[string]string `json:"type_casts,omitempty"`
-	TimeKey       string            `json:"time_key,omitempty"`
-	TimeFormat    string            `json:"time_format,omitempty"`
-	TimePrecision string            `json:"time_precision,omitempty"`
-}
-
 type ExportWorker struct {
 	kafkaProducer *kafka.Writer
+	topicMap      map[string]string
 }
 
-func NewExportWorker(kafkaProducer *kafka.Writer) *ExportWorker {
-	return &ExportWorker{kafkaProducer}
+func NewExportWorker(kafkaProducer *kafka.Writer, topicMap map[string]string) *ExportWorker {
+	return &ExportWorker{kafkaProducer, topicMap}
 }
 
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
 	serviceId = ""
-	mappings := map[string]string{}
-	castMap := map[string]string{}
-	err = genMappings(mappings, &dataFields, &tagFields, instance.TimePath, castMap)
+	filter := Filter{
+		Source:      instance.Topic,
+		Identifiers: []Identifier{},
+		Mappings:    map[string]string{},
+		ID:          instance.ID.String(),
+	}
+	genIdentifiers(&filter.Identifiers, instance.FilterType, instance.Filter, instance.Topic)
+	err = genMappings(filter.Mappings, &dataFields, &tagFields)
 	if err != nil {
 		return
 	}
-	var identifiers []Identifier
-	genIdentifiers(&identifiers, instance.FilterType, instance.Filter, instance.Topic)
-	exportArgs := InfluxDBExportArgs{TypeCasts: castMap}
-	genInfluxExportArgs(&exportArgs, instance.Database, instance.TimePath, instance.TimePrecision)
+	switch instance.DatabaseType {
+	case InfluxDB:
+		addInfluxDBTimeMapping(filter.Mappings, instance.TimePath)
+		influxDBExportArgs := InfluxDBExportArgs{}
+		err = genInfluxExportArgs(&influxDBExportArgs, instance.Database, instance.TimePath, instance.TimePrecision, &dataFields, &tagFields)
+		if err != nil {
+			return
+		}
+		filter.Args = influxDBExportArgs
+	case TimescaleDB:
+		err = addTimescaleDBTimeMapping(filter.Mappings, instance.TimePath)
+		if err != nil {
+			return
+		}
+		timescaleDBExportArgs := TimescaleDBExportArgs{}
+		err = genTimescaleDBExportArgs(&timescaleDBExportArgs, instance.ID.String(), instance.Database, instance.TimePath, instance.TimestampFormat, &dataFields)
+		if err != nil {
+			return
+		}
+		filter.Args = timescaleDBExportArgs
+	default:
+		err = errors.New("unknown or missing database type")
+		return
+	}
 	message := Message{
-		Method: MethodPut,
-		Payload: Filter{
-			Source:      instance.Topic,
-			Identifiers: identifiers,
-			Mappings:    mappings,
-			ID:          instance.Measurement,
-			Args:        exportArgs,
-		},
+		Method:    MethodPut,
+		Payload:   filter,
 		Timestamp: time.Now().UTC().Unix(),
 	}
-	err = ew.publish(&message, instance.Measurement)
+	err = ew.publish(&message, instance.ID.String(), ew.topicMap[instance.DatabaseType])
 	return
 }
 
-func (ew *ExportWorker) DeleteInstance(id string) (err error) {
+func (ew *ExportWorker) DeleteInstance(instance *lib.Instance) (err error) {
 	message := Message{
 		Method: MethodDelete,
 		Payload: Filter{
-			ID: id,
+			ID: instance.ID.String(),
 		},
 		Timestamp: time.Now().UTC().Unix(),
 	}
-	err = ew.publish(&message, id)
+	err = ew.publish(&message, instance.ID.String(), ew.topicMap[instance.DatabaseType])
 	return
 }
 
-func (ew *ExportWorker) publish(message *Message, key string) (err error) {
+func (ew *ExportWorker) publish(message *Message, key string, topic string) (err error) {
 	var jsonByte []byte
 	jsonByte, err = json.Marshal(message)
 	if err != nil {
 		return
 	}
 	err = ew.kafkaProducer.WriteMessages(context.Background(), kafka.Message{
+		Topic: topic,
 		Key:   []byte(key),
 		Value: jsonByte,
 	})
-	return
-}
-
-func addIdentifier(identifiers *[]Identifier, key string, value string) {
-	*identifiers = append(*identifiers, Identifier{
-		Key:   key,
-		Value: value,
-	})
-}
-
-func genIdentifiers(identifiers *[]Identifier, filterType string, filter string, topic string) {
-	switch filterType {
-	case TypeDevice:
-		addIdentifier(identifiers, IdentKeyDevice, filter)
-		addIdentifier(identifiers, IdentKeyService, strings.ReplaceAll(topic, "_", ":"))
-	case TypeAnalytics:
-		values := strings.Split(filter, ":")
-		addIdentifier(identifiers, IdentKeyPipeline, values[0])
-		addIdentifier(identifiers, IdentKeyOperator, values[1])
-	case TypeImport:
-		addIdentifier(identifiers, IdentKeyImport, filter)
-	}
-}
-
-func addMappings(mappings map[string]string, fields *string, mappingType string, castMap map[string]string) (err error) {
-	fieldsMap := map[string]string{}
-	err = json.Unmarshal([]byte(*fields), &fieldsMap)
-	if err != nil {
-		return
-	}
-	for key, val := range fieldsMap {
-		dst := strings.Split(key, ":")
-		mappings[dst[0]+mappingType] = val
-		castMap[dst[0]] = typeMap[dst[1]]
-	}
-	return
-}
-
-func genMappings(mappings map[string]string, dataFields *string, tagFields *string, timePath string, castMap map[string]string) (err error) {
-	if *dataFields != "" {
-		err = addMappings(mappings, dataFields, MappingData, castMap)
-	}
-	if *tagFields != "" {
-		err = addMappings(mappings, tagFields, MappingExtra, castMap)
-	}
-	if timePath != "" {
-		mappings[InfluxDBTimeKey+MappingExtra] = timePath
-	}
-	return
-}
-
-func genInfluxExportArgs(args *InfluxDBExportArgs, dbName string, timePath string, timePrecision *string) {
-	args.DBName = dbName
-	if timePath != "" {
-		args.TimeKey = InfluxDBTimeKey
-	}
-	if timePrecision != nil && *timePrecision != "" {
-		args.TimePrecision = *timePrecision
-	}
-}
-
-func InitTopic(addr string, topic string, serving *lib.Serving) (err error) {
-	var conn *kafka.Conn
-	conn, err = kafka.Dial("tcp", addr)
-	if err != nil {
-		return
-	}
-	defer func(conn *kafka.Conn) {
-		_ = conn.Close()
-	}(conn)
-	var partitions []kafka.Partition
-	partitions, err = conn.ReadPartitions()
-	if err != nil {
-		return
-	}
-	for _, p := range partitions {
-		if p.Topic == topic {
-			return
-		}
-	}
-	var controller kafka.Broker
-	controller, err = conn.Controller()
-	if err != nil {
-		return
-	}
-	log.Println("topic '" + topic + "' does not exist, creating ...")
-	var controllerConn *kafka.Conn
-	controllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
-	if err != nil {
-		panic(err.Error())
-	}
-	defer func(controllerConn *kafka.Conn) {
-		_ = controllerConn.Close()
-	}(controllerConn)
-	topicConfigs := []kafka.TopicConfig{
-		{
-			Topic:             topic,
-			NumPartitions:     1,
-			ReplicationFactor: 2,
-			ConfigEntries: []kafka.ConfigEntry{
-				{
-					ConfigName:  "retention.ms",
-					ConfigValue: "-1",
-				},
-				{
-					ConfigName:  "retention.bytes",
-					ConfigValue: "-1",
-				},
-				{
-					ConfigName:  "cleanup.policy",
-					ConfigValue: "compact",
-				},
-				{
-					ConfigName:  "delete.retention.ms",
-					ConfigValue: "86400000",
-				},
-				{
-					ConfigName:  "segment.ms",
-					ConfigValue: "604800000",
-				},
-				{
-					ConfigName:  "min.cleanable.dirty.ratio",
-					ConfigValue: "0.1",
-				},
-			},
-		},
-	}
-	err = controllerConn.CreateTopics(topicConfigs...)
-	if err != nil {
-		return
-	}
-	log.Println("topic created")
-	instances, _, errs := serving.GetInstances("", map[string][]string{}, true)
-	if len(errs) > 0 {
-		log.Println(errs)
-		err = errors.New("getting instances failed")
-		return
-	}
-	if len(instances) > 0 {
-		log.Println(fmt.Sprintf("found %d instances, publishing ...", len(instances)))
-		for _, instance := range instances {
-			err = serving.CreateFromInstance(&instance)
-			if err != nil {
-				return
-			}
-		}
-		log.Println("instances published")
-	}
 	return
 }
