@@ -18,7 +18,7 @@ package lib
 
 type Driver interface {
 	CreateInstance(instance *Instance, dataFields string, tagFields string) (serviceId string, err error)
-	DeleteInstance(id string) (err error)
+	DeleteInstance(instance *Instance) (err error)
 }
 
 type PermissionApiService interface {

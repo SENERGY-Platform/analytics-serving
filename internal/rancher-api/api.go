@@ -97,9 +97,9 @@ func (r Rancher) CreateInstance(instance *lib.Instance, dataFields string, tagFi
 	return
 }
 
-func (r Rancher) DeleteInstance(serviceId string) (err error) {
+func (r Rancher) DeleteInstance(instance *lib.Instance) (err error) {
 	request := gorequest.New().SetBasicAuth(r.accessKey, r.secretKey)
-	_, body, e := request.Delete(r.url + "services/" + serviceId).End()
+	_, body, e := request.Delete(r.url + "services/" + instance.RancherServiceId).End()
 	if len(e) > 0 {
 		err = errors.New("could not delete export: " + body)
 		return

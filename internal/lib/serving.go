@@ -195,15 +195,8 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 		return
 	}
 	err := retry(5, 5*time.Second, func() (err error) {
-		switch GetEnv("DRIVER", "rancher") {
-		case "ew":
-			err = f.driver.DeleteInstance(id)
-		case "rancher2":
-			err = f.driver.DeleteInstance(instance.ID.String())
-		default:
-			err = f.driver.DeleteInstance(instance.RancherServiceId)
-		}
-		return err
+		err = f.driver.DeleteInstance(&instance)
+		return
 	})
 	if err != nil {
 		errors = append(errors, err)
