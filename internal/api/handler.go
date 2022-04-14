@@ -57,7 +57,6 @@ func CreateServer() {
 		log.Println("using export-worker driver")
 		kafkaProducer := kafka.Writer{
 			Addr:        kafka.TCP(lib.GetEnv("KAFKA_BOOTSTRAP", "")),
-			Topic:       lib.GetEnv("EW_FILTER_TOPIC", ""),
 			MaxAttempts: 5,
 		}
 		defer func(kafkaProducer *kafka.Writer) {
