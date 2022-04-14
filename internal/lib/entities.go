@@ -21,19 +21,21 @@ type Response struct {
 }
 
 type ServingRequest struct {
-	FilterType    string                `json:"FilterType,omitempty" validate:"required"`
-	Filter        string                `json:"Filter,omitempty" validate:"required"`
-	Name          string                `json:"Name,omitempty" validate:"required"`
-	EntityName    string                `json:"EntityName,omitempty" validate:"required"`
-	ServiceName   string                `json:"ServiceName,omitempty" validate:"required"`
-	Description   string                `json:"Description,omitempty"`
-	Topic         string                `json:"Topic,omitempty" validate:"required"`
-	TimePath      string                `json:"TimePath,omitempty"`
-	TimePrecision string                `json:"TimePrecision,omitempty"`
-	Generated     bool                  `json:"generated,omitempty"`
-	Offset        string                `json:"Offset,omitempty" validate:"required"`
-	ForceUpdate   bool                  `json:"ForceUpdate,omitempty"`
-	Values        []ServingRequestValue `json:"Values,omitempty"`
+	FilterType      string                `json:"FilterType,omitempty" validate:"required"`
+	Filter          string                `json:"Filter,omitempty" validate:"required"`
+	Name            string                `json:"Name,omitempty" validate:"required"`
+	EntityName      string                `json:"EntityName,omitempty" validate:"required"`
+	ServiceName     string                `json:"ServiceName,omitempty" validate:"required"`
+	Description     string                `json:"Description,omitempty"`
+	Topic           string                `json:"Topic,omitempty" validate:"required"`
+	TimePath        string                `json:"TimePath,omitempty"`
+	TimePrecision   string                `json:"TimePrecision,omitempty"`
+	Generated       bool                  `json:"generated,omitempty"`
+	Offset          string                `json:"Offset,omitempty" validate:"required"`
+	ForceUpdate     bool                  `json:"ForceUpdate,omitempty"`
+	Values          []ServingRequestValue `json:"Values,omitempty"`
+	DatabaseType    string                `json:"DatabaseType,omitempty"`
+	TimestampFormat string                `json:"TimestampFormat,omitempty"`
 }
 
 type ServingRequestValue struct {
