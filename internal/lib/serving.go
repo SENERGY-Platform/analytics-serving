@@ -267,21 +267,23 @@ func (f *Serving) userHasSourceAccess(req ServingRequest, token string) (access 
 
 func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string, tagFields string) {
 	instance = Instance{
-		ID:            id,
-		Measurement:   id.String(),
-		Name:          req.Name,
-		ApplicationId: appId,
-		Description:   req.Description,
-		EntityName:    req.EntityName,
-		ServiceName:   req.ServiceName,
-		Topic:         req.Topic,
-		Filter:        req.Filter,
-		FilterType:    req.FilterType,
-		UserId:        userId,
-		Database:      userId,
-		TimePath:      req.TimePath,
-		Offset:        req.Offset,
-		Generated:     req.Generated,
+		ID:              id,
+		Measurement:     id.String(),
+		Name:            req.Name,
+		ApplicationId:   appId,
+		Description:     req.Description,
+		EntityName:      req.EntityName,
+		ServiceName:     req.ServiceName,
+		Topic:           req.Topic,
+		Filter:          req.Filter,
+		FilterType:      req.FilterType,
+		UserId:          userId,
+		Database:        userId,
+		TimePath:        req.TimePath,
+		Offset:          req.Offset,
+		Generated:       req.Generated,
+		DatabaseType:    req.DatabaseType,
+		TimestampFormat: req.TimestampFormat,
 	}
 	if req.TimePrecision != "" {
 		instance.TimePrecision = &req.TimePrecision
