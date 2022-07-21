@@ -36,6 +36,7 @@ func (m *Migration) Migrate() {
 		DB.CreateTable(&Instance{})
 	}
 	DB.AutoMigrate(&Instance{})
+	DB.Model(&Instance{}).AddForeignKey("export_database_id", "export_databases(id)", "RESTRICT", "CASCADE")
 	if !DB.HasTable("values") {
 		log.Println("Creating values table.")
 		DB.CreateTable(&Value{})

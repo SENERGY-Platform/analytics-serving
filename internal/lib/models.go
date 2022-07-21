@@ -42,6 +42,7 @@ type Instance struct {
 	RancherServiceId string    `gorm:"type:varchar(255)"`
 	Offset           string    `gorm:"type:varchar(255)"`
 	DatabaseType     string    `gorm:"type:varchar(255)"`
+	ExportDatabaseID string    `gorm:"type:varchar(255)"`
 	TimestampFormat  string    `gorm:"type:varchar(255)"`
 	Values           []Value   `gorm:"foreignkey:InstanceID;association_foreignkey:ID"`
 	CreatedAt        time.Time
