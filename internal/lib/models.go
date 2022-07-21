@@ -55,3 +55,14 @@ type Value struct {
 	Path       string    `gorm:"type:varchar(255)"`
 	Tag        bool      `gorm:"type:bool;DEFAULT:false"`
 }
+
+type ExportDatabase struct {
+	ID            string `gorm:"primary_key;type:varchar(255);column:id"`
+	Name          string `gorm:"type:varchar(255)"`
+	Description   string `gorm:"type:varchar(255)"`
+	Type          string `gorm:"type:varchar(255)"`
+	Internal      bool   `gorm:"type:bool;DEFAULT:false"`
+	Url           string `gorm:"type:varchar(255)"`
+	EwFilterTopic string `gorm:"type:varchar(255)"`
+	UserId        string `gorm:"type:varchar(255)"`
+}
