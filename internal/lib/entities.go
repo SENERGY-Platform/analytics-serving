@@ -56,6 +56,15 @@ type Claims struct {
 	RealmAccess map[string][]string `json:"realm_access,omitempty"`
 }
 
+type ExportDatabaseRequest struct {
+	Name          string `json:"name"`
+	Description   string `json:"description,omitempty"`
+	Type          string `json:"type"`
+	Internal      bool   `json:"internal"`
+	Url           string `json:"url"`
+	EwFilterTopic string `json:"ew_filter_topic"`
+}
+
 func (c Claims) Valid() error {
 	return nil
 }
