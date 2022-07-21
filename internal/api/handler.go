@@ -100,6 +100,11 @@ func CreateServer() {
 	router.HandleFunc("/instances", e.deleteServingInstances).Methods("DELETE")
 	router.HandleFunc("/admin/instance", e.getServingInstancesAdmin).Methods("GET")
 	router.HandleFunc("/admin/instance/{id}", e.deleteServingInstanceAdmin).Methods("DELETE")
+	router.HandleFunc("/databases", e.readExportDatabases).Methods("GET")
+	router.HandleFunc("/databases", e.writeExportDatabase).Methods("POST")
+	router.HandleFunc("/databases/{id}", e.readExportDatabase).Methods("GET")
+	router.HandleFunc("/databases/{id}", e.writeExportDatabase).Methods("PUT")
+	router.HandleFunc("/databases/{id}", e.deleteExportDatabase).Methods("DELETE")
 	c := cors.New(
 		cors.Options{
 			AllowedHeaders: []string{"Content-Type", "Authorization"},
