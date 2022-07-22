@@ -18,10 +18,11 @@ package lib
 
 import (
 	"errors"
-	"log"
-
+	"fmt"
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
+	"github.com/jinzhu/gorm"
+	"log"
 	"strings"
 	"time"
 )
