@@ -223,6 +223,99 @@ func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
 	return
 }
 
+func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (databases []ExportDatabase, errs []error) {
+	tx := DB.Select("*").Where("user_id = ?", userId)
+	for arg, value := range args {
+		if arg == "limit" {
+			tx = tx.Limit(value[0])
+		}
+		if arg == "offset" {
+			tx = tx.Offset(value[0])
+		}
+		if arg == "order" {
+			order := strings.SplitN(value[0], ":", 2)
+			tx = tx.Order(order[0] + " " + order[1])
+		}
+		if arg == "search" {
+			search := strings.SplitN(value[0], ":", 2)
+			if len(search) > 1 {
+				allowed := []string{"name", "description", "type"}
+				if StringInSlice(search[0], allowed) {
+					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
+				}
+			} else {
+				tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
+			}
+
+		}
+		if arg == "external" {
+			if value[0] == "true" {
+				tx = tx.Where("`external` = TRUE")
+			} else {
+				tx = tx.Where("`external` = FALSE")
+			}
+		}
+	}
+	errs = tx.Find(&databases).GetErrors()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			if gorm.IsRecordNotFoundError(err) {
+				return databases, nil
+			}
+		}
+		log.Println("listing export-databases failed - " + fmt.Sprint(errs))
+		return
+	}
+	return
+}
+
+func (f *Serving) GetExportDatabase(id string) (database ExportDatabase, errs []error) {
+	errs = DB.Where("id = ?", id).First(&database).GetErrors()
+	if len(errs) > 0 {
+		log.Println("retrieving export-database failed - " + id + " - " + fmt.Sprint(errs))
+		return
+	}
+	return
+}
+
+func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
+	database = populateExportDatabase(id, req, userId)
+	DB.NewRecord(database)
+	errs = DB.Create(&database).GetErrors()
+	if len(errs) > 0 {
+		log.Println("creating export-database failed - " + id + " - " + fmt.Sprint(errs))
+		return
+	}
+	log.Println("successfully created export-database - " + database.ID)
+	return
+}
+
+func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
+	database = populateExportDatabase(id, req, userId)
+	errs = DB.Save(&database).GetErrors()
+	if len(errs) > 0 {
+		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
+		return
+	}
+	log.Println("successfully updated export-database - " + database.ID)
+	return
+}
+
+func (f *Serving) DeleteExportDatabase(id string) (errs []error) {
+	var database ExportDatabase
+	tx := DB.Where("id = ?", id)
+	errs = tx.First(&database).GetErrors()
+	if len(errs) > 0 {
+		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
+		return
+	}
+	errs = DB.Delete(&database).GetErrors()
+	if len(errs) > 0 {
+		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
+	}
+	return
+}
+
 func (f *Serving) userHasSourceAccess(req ServingRequest, token string) (access bool, err error) {
 	access = false
 	switch req.FilterType {
@@ -291,6 +384,21 @@ func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId 
 
 	instance.Values, dataFields, tagFields = transformServingValues(id, req.Values)
 
+	return
+}
+
+func populateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase) {
+	database = ExportDatabase{
+		ID:            id,
+		Name:          req.Name,
+		Description:   req.Description,
+		Type:          req.Type,
+		External:      req.External,
+		Url:           req.Url,
+		EwFilterTopic: req.EwFilterTopic,
+		Public:        req.Public,
+		UserId:        userId,
+	}
 	return
 }
 
