@@ -58,12 +58,13 @@ type Claims struct {
 }
 
 type ExportDatabaseRequest struct {
-	Name          string `json:"name"`
-	Description   string `json:"description,omitempty"`
-	Type          string `json:"type"`
-	Internal      bool   `json:"internal"`
-	Url           string `json:"url"`
-	EwFilterTopic string `json:"ew_filter_topic"`
+	Name          string `json:"name" validate:"required"`
+	Description   string `json:"description"`
+	Type          string `json:"type" validate:"required"`
+	External      bool   `json:"external"`
+	Url           string `json:"url" validate:"required"`
+	EwFilterTopic string `json:"ew_filter_topic" validate:"required"`
+	Public        bool   `json:"public"`
 }
 
 func (c Claims) Valid() error {
