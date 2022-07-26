@@ -19,7 +19,10 @@ package api
 import (
 	"analytics-serving/internal/lib"
 	"encoding/json"
+	"fmt"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
 	"strings"
