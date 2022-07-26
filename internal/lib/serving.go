@@ -270,8 +270,8 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 	return
 }
 
-func (f *Serving) GetExportDatabase(id string) (database ExportDatabase, errs []error) {
-	errs = DB.Where("id = ?", id).First(&database).GetErrors()
+func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDatabase, errs []error) {
+	errs = DB.Where("id = ? AND (user_id = ? OR public = TRUE)", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
 		log.Println("retrieving export-database failed - " + id + " - " + fmt.Sprint(errs))
 		return
