@@ -307,10 +307,9 @@ func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, use
 	return
 }
 
-func (f *Serving) DeleteExportDatabase(id string) (errs []error) {
+func (f *Serving) DeleteExportDatabase(id string, userId string) (errs []error) {
 	var database ExportDatabase
-	tx := DB.Where("id = ?", id)
-	errs = tx.First(&database).GetErrors()
+	errs = DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
 		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
 		return
