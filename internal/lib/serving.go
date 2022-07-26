@@ -225,7 +225,7 @@ func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
 }
 
 func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (databases []ExportDatabase, errs []error) {
-	tx := DB.Select("*").Where("user_id = ?", userId)
+	tx := DB.Select("*").Where("public = TRUE OR user_id = ?", userId)
 	for arg, value := range args {
 		if arg == "limit" {
 			tx = tx.Limit(value[0])
