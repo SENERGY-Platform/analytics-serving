@@ -52,7 +52,13 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string, token string
 }
 
 func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) (instance Instance, err error) {
+	database, errs := f.GetExportDatabase(req.ExportDatabaseID, userId)
+	if len(errs) > 0 {
+		err = errors.New("export-database does not exist or user unauthorized")
+		return
+	}
 	instance, dataFields, tagFields := populateInstance(id, appId, req, userId)
+	instance.ExportDatabase = database
 	err = retry(5, 5*time.Second, func() (err error) {
 		serviceId, err := f.driver.CreateInstance(&instance, dataFields, tagFields)
 		if err == nil {
