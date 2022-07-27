@@ -285,6 +285,8 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 		if arg == "owner" {
 			if value[0] == "true" {
 				tx = tx.Where("`user_id` = ?", userId)
+			} else {
+				tx = tx.Where("`user_id` != ?", userId)
 			}
 		}
 	}
