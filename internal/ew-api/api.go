@@ -27,11 +27,10 @@ import (
 
 type ExportWorker struct {
 	kafkaProducer *kafka.Writer
-	topicMap      map[string]string
 }
 
-func NewExportWorker(kafkaProducer *kafka.Writer, topicMap map[string]string) *ExportWorker {
-	return &ExportWorker{kafkaProducer, topicMap}
+func NewExportWorker(kafkaProducer *kafka.Writer) *ExportWorker {
+	return &ExportWorker{kafkaProducer}
 }
 
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
@@ -76,7 +75,7 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		Payload:   filter,
 		Timestamp: time.Now().UTC().Unix(),
 	}
-	err = ew.publish(&message, instance.ID.String(), ew.topicMap[instance.DatabaseType])
+	err = ew.publish(&message, instance.ID.String(), instance.ExportDatabase.EwFilterTopic)
 	return
 }
 
@@ -88,7 +87,7 @@ func (ew *ExportWorker) DeleteInstance(instance *lib.Instance) (err error) {
 		},
 		Timestamp: time.Now().UTC().Unix(),
 	}
-	err = ew.publish(&message, instance.ID.String(), ew.topicMap[instance.DatabaseType])
+	err = ew.publish(&message, instance.ID.String(), instance.ExportDatabase.EwFilterTopic)
 	return
 }
 

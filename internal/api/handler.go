@@ -63,13 +63,7 @@ func CreateServer() {
 		defer func(kafkaProducer *kafka.Writer) {
 			_ = kafkaProducer.Close()
 		}(&kafkaProducer)
-		topicMap := map[string]string{}
-		err = json.Unmarshal([]byte(lib.GetEnv("EW_FILTER_TOPIC_MAP", "")), &topicMap)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		driver = ew_api.NewExportWorker(&kafkaProducer, topicMap)
+		driver = ew_api.NewExportWorker(&kafkaProducer)
 	default:
 		log.Println("No driver selected")
 	}
