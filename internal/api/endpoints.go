@@ -217,94 +217,118 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 
 func (e *Endpoint) readExportDatabases(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	args := req.URL.Query()
 	userId, _ := getUserInfo(req)
-	databases, errs := e.serving.GetExportDatabases(userId, args)
-	if errs != nil && len(errs) > 0 {
-		w.WriteHeader(http.StatusInternalServerError)
-		err := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
+	if userId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": "missing user id"})
 		if err != nil {
 			log.Println(err)
 		}
 	} else {
-		w.WriteHeader(http.StatusOK)
-		err2 := json.NewEncoder(w).Encode(databases)
-		if err2 != nil {
-			log.Println(err2)
+		args := req.URL.Query()
+		databases, errs := e.serving.GetExportDatabases(userId, args)
+		if errs != nil && len(errs) > 0 {
+			w.WriteHeader(http.StatusInternalServerError)
+			err := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
+			if err != nil {
+				log.Println(err)
+			}
+		} else {
+			w.WriteHeader(http.StatusOK)
+			err2 := json.NewEncoder(w).Encode(databases)
+			if err2 != nil {
+				log.Println(err2)
+			}
 		}
 	}
 }
 
 func (e *Endpoint) readExportDatabase(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	vars := mux.Vars(req)
 	userId, _ := getUserInfo(req)
-	database, errs := e.serving.GetExportDatabase(vars["id"], userId)
-	if len(errs) > 0 {
-		status := http.StatusInternalServerError
-		for _, err := range errs {
-			if gorm.IsRecordNotFoundError(err) {
-				status = http.StatusNotFound
-			}
-		}
-		w.WriteHeader(status)
-		err2 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
-		if err2 != nil {
-			log.Println(err2)
+	if userId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": "missing user id"})
+		if err != nil {
+			log.Println(err)
 		}
 	} else {
-		w.WriteHeader(http.StatusOK)
-		err3 := json.NewEncoder(w).Encode(database)
-		if err3 != nil {
-			log.Println(err3)
+		vars := mux.Vars(req)
+		database, errs := e.serving.GetExportDatabase(vars["id"], userId)
+		if len(errs) > 0 {
+			status := http.StatusInternalServerError
+			for _, err := range errs {
+				if gorm.IsRecordNotFoundError(err) {
+					status = http.StatusNotFound
+				}
+			}
+			w.WriteHeader(status)
+			err2 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
+			if err2 != nil {
+				log.Println(err2)
+			}
+		} else {
+			w.WriteHeader(http.StatusOK)
+			err3 := json.NewEncoder(w).Encode(database)
+			if err3 != nil {
+				log.Println(err3)
+			}
 		}
 	}
 }
 
 func (e *Endpoint) writeExportDatabase(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	decoder := json.NewDecoder(req.Body)
-	defer req.Body.Close()
-	var databaseReq lib.ExportDatabaseRequest
-	err := decoder.Decode(&databaseReq)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		err2 := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		if err2 != nil {
-			log.Println(err2)
+	userId, _ := getUserInfo(req)
+	if userId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": "missing user id"})
+		if err != nil {
+			log.Println(err)
 		}
 	} else {
-		validated, verrs := ValidateInputs(databaseReq)
-		if validated {
-			userId, _ := getUserInfo(req)
-			var database lib.ExportDatabase
-			var errs []error
-			switch req.Method {
-			case http.MethodPost:
-				database, errs = e.serving.CreateExportDatabase("urn:infai:ses:export-db:"+uuid.New().String(), databaseReq, userId)
-			case http.MethodPut:
-				vars := mux.Vars(req)
-				database, errs = e.serving.UpdateExportDatabase(vars["id"], databaseReq, userId)
-			}
-			if len(errs) > 0 {
-				w.WriteHeader(http.StatusInternalServerError)
-				err3 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
-				if err3 != nil {
-					log.Println(err3)
-				}
-			} else {
-				w.WriteHeader(http.StatusOK)
-				err4 := json.NewEncoder(w).Encode(database)
-				if err4 != nil {
-					log.Println(err4)
-				}
+		decoder := json.NewDecoder(req.Body)
+		defer req.Body.Close()
+		var databaseReq lib.ExportDatabaseRequest
+		err := decoder.Decode(&databaseReq)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			err2 := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			if err2 != nil {
+				log.Println(err2)
 			}
 		} else {
-			w.WriteHeader(http.StatusBadRequest)
-			err5 := json.NewEncoder(w).Encode(map[string]map[string][]string{"validation_errors": verrs})
-			if err5 != nil {
-				log.Println(err5)
+			validated, verrs := ValidateInputs(databaseReq)
+			if validated {
+				var database lib.ExportDatabase
+				var errs []error
+				switch req.Method {
+				case http.MethodPost:
+					database, errs = e.serving.CreateExportDatabase("urn:infai:ses:export-db:"+uuid.New().String(), databaseReq, userId)
+				case http.MethodPut:
+					vars := mux.Vars(req)
+					database, errs = e.serving.UpdateExportDatabase(vars["id"], databaseReq, userId)
+				}
+				if len(errs) > 0 {
+					w.WriteHeader(http.StatusInternalServerError)
+					err3 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
+					if err3 != nil {
+						log.Println(err3)
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					err4 := json.NewEncoder(w).Encode(database)
+					if err4 != nil {
+						log.Println(err4)
+					}
+				}
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				err5 := json.NewEncoder(w).Encode(map[string]map[string][]string{"validation_errors": verrs})
+				if err5 != nil {
+					log.Println(err5)
+				}
 			}
 		}
 	}
@@ -314,21 +338,29 @@ func (e *Endpoint) deleteExportDatabase(w http.ResponseWriter, req *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(req)
 	userId, _ := getUserInfo(req)
-	errs := e.serving.DeleteExportDatabase(vars["id"], userId)
-	if len(errs) > 0 {
-		status := http.StatusInternalServerError
-		for _, err := range errs {
-			if gorm.IsRecordNotFoundError(err) {
-				status = http.StatusNotFound
-			}
-		}
-		w.WriteHeader(status)
-		err2 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
-		if err2 != nil {
-			log.Println(err2)
+	if userId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": "missing user id"})
+		if err != nil {
+			log.Println(err)
 		}
 	} else {
-		w.WriteHeader(http.StatusOK)
+		errs := e.serving.DeleteExportDatabase(vars["id"], userId)
+		if len(errs) > 0 {
+			status := http.StatusInternalServerError
+			for _, err := range errs {
+				if gorm.IsRecordNotFoundError(err) {
+					status = http.StatusNotFound
+				}
+			}
+			w.WriteHeader(status)
+			err2 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
+			if err2 != nil {
+				log.Println(err2)
+			}
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
 	}
 }
 
