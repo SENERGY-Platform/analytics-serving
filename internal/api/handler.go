@@ -24,7 +24,6 @@ import (
 	pipeline_api "analytics-serving/internal/pipeline-api"
 	rancher_api "analytics-serving/internal/rancher-api"
 	rancher2_api "analytics-serving/internal/rancher2-api"
-	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/segmentio/kafka-go"
@@ -77,13 +76,7 @@ func CreateServer() {
 
 	e := NewEndpoint(driver, permission, pipeline, imp)
 	if selectedDriver == "ew" {
-		topicMap := map[string]string{}
-		err = json.Unmarshal([]byte(lib.GetEnv("EW_FILTER_TOPIC_MAP", "")), &topicMap)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		err = ew_api.InitTopics(lib.GetEnv("KAFKA_BOOTSTRAP", ""), topicMap, e.serving)
+		err = ew_api.InitTopics(lib.GetEnv("KAFKA_BOOTSTRAP", ""), e.serving)
 	}
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
 	router.HandleFunc("/instance", e.postNewServingInstance).Methods("POST")

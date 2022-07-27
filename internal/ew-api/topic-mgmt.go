@@ -3,6 +3,8 @@ package ew_api
 import (
 	"analytics-serving/internal/lib"
 	"errors"
+	"fmt"
+	"github.com/jinzhu/gorm"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"net"
@@ -85,7 +87,18 @@ func publishInstances(serving *lib.Serving, missing_topics *[]string, topicMap m
 	return
 }
 
-func InitTopics(addr string, topicMap map[string]string, serving *lib.Serving) (err error) {
+func InitTopics(addr string, serving *lib.Serving) (err error) {
+	var databases []lib.ExportDatabase
+	errs := lib.DB.Find(&databases).GetErrors()
+	if len(errs) > 0 {
+		for _, e := range errs {
+			if gorm.IsRecordNotFoundError(e) {
+				return
+			}
+		}
+		err = errors.New("retrieving export-databases failed - " + fmt.Sprint(errs))
+		return
+	}
 	var conn *kafka.Conn
 	conn, err = kafka.Dial("tcp", addr)
 	if err != nil {
