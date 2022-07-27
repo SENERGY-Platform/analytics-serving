@@ -275,6 +275,18 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 				tx = tx.Where("`external` = FALSE")
 			}
 		}
+		if arg == "public" {
+			if value[0] == "true" {
+				tx = tx.Where("`public` = TRUE")
+			} else {
+				tx = tx.Where("`public` = FALSE")
+			}
+		}
+		if arg == "owner" {
+			if value[0] == "true" {
+				tx = tx.Where("`id` = ?", userId)
+			}
+		}
 	}
 	errs = tx.Find(&databases).GetErrors()
 	if len(errs) > 0 {
