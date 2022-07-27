@@ -24,27 +24,28 @@ import (
 type Instances []Instance
 
 type Instance struct {
-	ID               uuid.UUID `gorm:"primary_key;type:char(36);column:id"`
-	Name             string    `gorm:"type:varchar(255)"`
-	Description      string    `gorm:"type:varchar(255)"`
-	EntityName       string    `gorm:"type:varchar(255)"`
-	ServiceName      string    `gorm:"type:varchar(255)"`
-	Topic            string    `gorm:"type:varchar(255)"`
-	ApplicationId    uuid.UUID `gorm:"type:char(36)"`
-	Database         string    `gorm:"type:varchar(255)"`
-	Measurement      string    `gorm:"type:varchar(255)"`
-	Filter           string    `gorm:"type:varchar(255)"`
-	FilterType       string    `gorm:"type:varchar(255)"`
-	TimePath         string    `gorm:"type:varchar(255)"`
-	TimePrecision    *string   `gorm:"type:varchar(255)"`
-	UserId           string    `gorm:"type:varchar(255)"`
-	Generated        bool      `gorm:"type:bool;DEFAULT:false"`
-	RancherServiceId string    `gorm:"type:varchar(255)"`
-	Offset           string    `gorm:"type:varchar(255)"`
-	DatabaseType     string    `gorm:"type:varchar(255)"`
-	ExportDatabaseID string    `gorm:"type:varchar(255)"`
-	TimestampFormat  string    `gorm:"type:varchar(255)"`
-	Values           []Value   `gorm:"foreignkey:InstanceID;association_foreignkey:ID"`
+	ID               uuid.UUID      `gorm:"primary_key;type:char(36);column:id"`
+	Name             string         `gorm:"type:varchar(255)"`
+	Description      string         `gorm:"type:varchar(255)"`
+	EntityName       string         `gorm:"type:varchar(255)"`
+	ServiceName      string         `gorm:"type:varchar(255)"`
+	Topic            string         `gorm:"type:varchar(255)"`
+	ApplicationId    uuid.UUID      `gorm:"type:char(36)"`
+	Database         string         `gorm:"type:varchar(255)"`
+	Measurement      string         `gorm:"type:varchar(255)"`
+	Filter           string         `gorm:"type:varchar(255)"`
+	FilterType       string         `gorm:"type:varchar(255)"`
+	TimePath         string         `gorm:"type:varchar(255)"`
+	TimePrecision    *string        `gorm:"type:varchar(255)"`
+	UserId           string         `gorm:"type:varchar(255)"`
+	Generated        bool           `gorm:"type:bool;DEFAULT:false"`
+	RancherServiceId string         `gorm:"type:varchar(255)"`
+	Offset           string         `gorm:"type:varchar(255)"`
+	DatabaseType     string         `gorm:"type:varchar(255)"`
+	ExportDatabaseID string         `gorm:"type:varchar(255)"`
+	ExportDatabase   ExportDatabase `gorm:"association_autoupdate:false;association_autocreate:false"`
+	TimestampFormat  string         `gorm:"type:varchar(255)"`
+	Values           []Value        `gorm:"foreignkey:InstanceID;association_foreignkey:ID"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
