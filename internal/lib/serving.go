@@ -167,6 +167,10 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 				countTx = countTx.Where("`generated` = FALSE")
 			}
 		}
+		if arg == "export_database_id" {
+			tx = tx.Where("export_database_id = ?", value[0])
+			countTx = countTx.Where("export_database_id = ?", value[0])
+		}
 		if arg == "external" {
 			if value[0] == "true" {
 				tx = tx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("external = TRUE AND (public = TRUE OR user_id = ?)", userId).SubQuery())
