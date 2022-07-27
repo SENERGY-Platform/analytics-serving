@@ -46,7 +46,7 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 	if err != nil {
 		return
 	}
-	switch instance.DatabaseType {
+	switch instance.ExportDatabase.Type {
 	case InfluxDB:
 		addInfluxDBTimeMapping(filter.Mappings, instance.TimePath)
 		influxDBExportArgs := InfluxDBExportArgs{}
