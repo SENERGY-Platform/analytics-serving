@@ -119,7 +119,7 @@ func (f *Serving) update(id string, userId string, request ServingRequest, insta
 }
 
 func (f *Serving) GetInstance(id string, userId string) (instance Instance, errors []error) {
-	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance).GetErrors()
+	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
 	return
 }
 
@@ -168,7 +168,7 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 			}
 		}
 	}
-	errors = tx.Preload("Values").Find(&instances).GetErrors()
+	errors = tx.Preload("Values").Preload("ExportDatabase").Find(&instances).GetErrors()
 	countTx.Find(&Instances{}).Count(&total)
 	return
 }
