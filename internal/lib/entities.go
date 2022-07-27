@@ -34,7 +34,6 @@ type ServingRequest struct {
 	Offset           string                `json:"Offset,omitempty" validate:"required"`
 	ForceUpdate      bool                  `json:"ForceUpdate,omitempty"`
 	Values           []ServingRequestValue `json:"Values,omitempty"`
-	DatabaseType     string                `json:"DatabaseType,omitempty"`
 	ExportDatabaseID string                `json:"ExportDatabaseID,omitempty"`
 	TimestampFormat  string                `json:"TimestampFormat,omitempty"`
 }
