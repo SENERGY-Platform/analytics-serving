@@ -266,7 +266,6 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 			} else {
 				tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
 			}
-
 		}
 		if arg == "external" {
 			if value[0] == "true" {
