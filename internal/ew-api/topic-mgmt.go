@@ -63,26 +63,24 @@ func createTopic(controllerConn *kafka.Conn, topic string) (err error) {
 	return
 }
 
-func publishInstances(serving *lib.Serving, missing_topics *[]string, topicMap map[string]string) (err error) {
-	instances, _, errs := serving.GetInstances("", map[string][]string{}, true)
-	if len(errs) > 0 {
-		log.Println(errs)
-		err = errors.New("getting instances failed")
-		return
-	}
-	if len(instances) > 0 {
-		for _, topic := range *missing_topics {
+func publishInstances(serving *lib.Serving, missingIds *[]string) (err error) {
+	for _, id := range *missingIds {
+		instances, _, errs := serving.GetInstances("", map[string][]string{"export_database_id": {id}}, true)
+		if len(errs) > 0 {
+			log.Println(errs)
+			err = errors.New("getting instances failed")
+			return
+		}
+		if len(instances) > 0 {
 			for _, instance := range instances {
-				if topicMap[instance.DatabaseType] == topic {
-					log.Println("publishing instance '" + instance.ID.String() + "' to '" + topic + "'")
-					err = serving.CreateFromInstance(&instance)
-					if err != nil {
-						log.Println(err)
-					}
+				log.Println("publishing instance '" + instance.ID.String() + "' to '" + instance.ExportDatabase.EwFilterTopic + "'")
+				err = serving.CreateFromInstance(&instance)
+				if err != nil {
+					log.Println(err)
 				}
 			}
+			log.Println("instances published")
 		}
-		log.Println("instances published")
 	}
 	return
 }
