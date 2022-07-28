@@ -112,13 +112,13 @@ func InitTopics(addr string, serving *lib.Serving) (err error) {
 	if err != nil {
 		return
 	}
-	var missing_topics []string
-	for _, t := range topicMap {
-		if !checkTopic(&partitions, t) {
-			missing_topics = append(missing_topics, t)
+	var missingItems [][2]string
+	for _, database := range databases {
+		if !checkTopic(&partitions, database.EwFilterTopic) {
+			missingItems = append(missingItems, [2]string{database.ID, database.EwFilterTopic})
 		}
 	}
-	if len(missing_topics) > 0 {
+	if len(missingItems) > 0 {
 		var controller kafka.Broker
 		controller, err = conn.Controller()
 		if err != nil {
@@ -132,8 +132,8 @@ func InitTopics(addr string, serving *lib.Serving) (err error) {
 		defer func(controllerConn *kafka.Conn) {
 			_ = controllerConn.Close()
 		}(controllerConn)
-		for _, t := range missing_topics {
-			err = createTopic(controllerConn, t)
+		for _, i := range missingItems {
+			err = createTopic(controllerConn, i[1])
 			if err != nil {
 				return
 			}
