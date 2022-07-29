@@ -111,3 +111,12 @@ func publishInstances(serving *lib.Serving, missingIds *[]string) (err error) {
 	}
 	return
 }
+
+func stringInSlice(sl *[]string, s string) bool {
+	for _, c := range *sl {
+		if c == s {
+			return true
+		}
+	}
+	return false
+}
