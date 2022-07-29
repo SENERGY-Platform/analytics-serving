@@ -55,14 +55,39 @@ func CreateServer() {
 		)
 	case "ew":
 		log.Println("using export-worker driver")
+		addr := lib.GetEnv("KAFKA_BOOTSTRAP", "")
 		kafkaProducer := kafka.Writer{
-			Addr:        kafka.TCP(lib.GetEnv("KAFKA_BOOTSTRAP", "")),
+			Addr:        kafka.TCP(addr),
 			MaxAttempts: 5,
 		}
-		defer func(kafkaProducer *kafka.Writer) {
-			_ = kafkaProducer.Close()
+		defer func(producer *kafka.Writer) {
+			_ = producer.Close()
 		}(&kafkaProducer)
-		driver = ew_api.NewExportWorker(&kafkaProducer)
+		var kafkaConn *kafka.Conn
+		kafkaConn, err = kafka.Dial("tcp", addr)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		defer func(conn *kafka.Conn) {
+			_ = conn.Close()
+		}(kafkaConn)
+		var controller kafka.Broker
+		controller, err = kafkaConn.Controller()
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		var kafkaControllerConn *kafka.Conn
+		kafkaControllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		defer func(controllerConn *kafka.Conn) {
+			_ = controllerConn.Close()
+		}(kafkaControllerConn)
+		driver = ew_api.NewExportWorker(&kafkaProducer, kafkaConn, kafkaControllerConn)
 	default:
 		log.Println("No driver selected")
 	}

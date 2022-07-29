@@ -1,9 +1,13 @@
 package ew_api
 
 import (
+	"analytics-serving/internal/lib"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"github.com/segmentio/kafka-go"
+	"log"
 	"strings"
 )
 
@@ -75,4 +79,35 @@ func shortenId(longId string) (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(bytes), nil
+}
+
+func checkTopic(partitions *[]kafka.Partition, topic string) bool {
+	for _, p := range *partitions {
+		if p.Topic == topic {
+			return true
+		}
+	}
+	return false
+}
+
+func publishInstances(serving *lib.Serving, missingIds *[]string) (err error) {
+	for _, id := range *missingIds {
+		instances, _, errs := serving.GetInstances("", map[string][]string{"export_database_id": {id}}, true)
+		if len(errs) > 0 {
+			log.Println(errs)
+			err = errors.New("getting instances failed")
+			return
+		}
+		if len(instances) > 0 {
+			for _, instance := range instances {
+				log.Println("publishing instance '" + instance.ID.String() + "' to '" + instance.ExportDatabase.EwFilterTopic + "'")
+				err = serving.CreateFromInstance(&instance)
+				if err != nil {
+					log.Println(err)
+				}
+			}
+			log.Println("instances published")
+		}
+	}
+	return
 }

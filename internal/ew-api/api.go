@@ -21,16 +21,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/jinzhu/gorm"
 	"github.com/segmentio/kafka-go"
+	"log"
 	"time"
 )
 
 type ExportWorker struct {
-	kafkaProducer *kafka.Writer
+	kafkaProducer       *kafka.Writer
+	kafkaConn           *kafka.Conn
+	kafkaControllerConn *kafka.Conn
 }
 
-func NewExportWorker(kafkaProducer *kafka.Writer) *ExportWorker {
-	return &ExportWorker{kafkaProducer}
+func NewExportWorker(kafkaProducer *kafka.Writer, kafkaConn *kafka.Conn, kafkaControllerConn *kafka.Conn) *ExportWorker {
+	return &ExportWorker{kafkaProducer, kafkaConn, kafkaControllerConn}
 }
 
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
@@ -88,6 +93,85 @@ func (ew *ExportWorker) DeleteInstance(instance *lib.Instance) (err error) {
 		Timestamp: time.Now().UTC().Unix(),
 	}
 	err = ew.publish(&message, instance.ID.String(), instance.ExportDatabase.EwFilterTopic)
+	return
+}
+
+func (ew *ExportWorker) CreateFilterTopic(topic string) (err error) {
+	topicConfigs := []kafka.TopicConfig{
+		{
+			Topic:             topic,
+			NumPartitions:     1,
+			ReplicationFactor: 2,
+			ConfigEntries: []kafka.ConfigEntry{
+				{
+					ConfigName:  "retention.ms",
+					ConfigValue: "-1",
+				},
+				{
+					ConfigName:  "retention.bytes",
+					ConfigValue: "-1",
+				},
+				{
+					ConfigName:  "cleanup.policy",
+					ConfigValue: "compact",
+				},
+				{
+					ConfigName:  "delete.retention.ms",
+					ConfigValue: "86400000",
+				},
+				{
+					ConfigName:  "segment.ms",
+					ConfigValue: "604800000",
+				},
+				{
+					ConfigName:  "min.cleanable.dirty.ratio",
+					ConfigValue: "0.1",
+				},
+			},
+		},
+	}
+	err = ew.kafkaControllerConn.CreateTopics(topicConfigs...)
+	if err != nil {
+		return
+	}
+	log.Println("topic '" + topic + "' created")
+	return
+}
+
+func (ew *ExportWorker) InitFilterTopics(serving *lib.Serving) (err error) {
+	var databases []lib.ExportDatabase
+	errs := lib.DB.Find(&databases).GetErrors()
+	if len(errs) > 0 {
+		for _, e := range errs {
+			if gorm.IsRecordNotFoundError(e) {
+				return
+			}
+		}
+		err = errors.New("retrieving export-databases failed - " + fmt.Sprint(errs))
+		return
+	}
+	var partitions []kafka.Partition
+	partitions, err = ew.kafkaConn.ReadPartitions()
+	if err != nil {
+		return
+	}
+	var missingIds []string
+	var missingTopics []string
+	for _, database := range databases {
+		if !checkTopic(&partitions, database.EwFilterTopic) {
+			missingIds = append(missingIds, database.ID)
+			missingTopics = append(missingTopics, database.EwFilterTopic)
+		}
+	}
+	if len(missingIds) > 0 {
+		for _, topic := range missingTopics {
+			err = ew.CreateFilterTopic(topic)
+			if err != nil {
+				return
+			}
+		}
+		err = publishInstances(serving, &missingIds)
+	}
 	return
 }
 
