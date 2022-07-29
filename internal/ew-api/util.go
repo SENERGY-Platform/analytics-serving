@@ -106,7 +106,6 @@ func publishInstances(serving *lib.Serving, missingIds *[]string) (err error) {
 					log.Println(err)
 				}
 			}
-			log.Println("instances published")
 		}
 	}
 	return
