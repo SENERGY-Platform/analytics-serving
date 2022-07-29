@@ -34,6 +34,6 @@ type ImportDeployService interface {
 }
 
 type ExportWorkerKafkaApi interface {
-	CreateFilterTopic(topic string) (err error)
-	InitFilterTopics(serving *Serving) (err error)
+	CreateFilterTopic(topic string, checkExists bool) error
+	InitFilterTopics(serving *Serving) error
 }

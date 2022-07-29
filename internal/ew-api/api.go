@@ -96,7 +96,17 @@ func (ew *ExportWorker) DeleteInstance(instance *lib.Instance) (err error) {
 	return
 }
 
-func (ew *ExportWorker) CreateFilterTopic(topic string) (err error) {
+func (ew *ExportWorker) CreateFilterTopic(topic string, checkExists bool) (err error) {
+	if checkExists {
+		var partitions []kafka.Partition
+		partitions, err = ew.kafkaConn.ReadPartitions()
+		if err != nil {
+			return
+		}
+		if checkTopic(&partitions, topic) {
+			return
+		}
+	}
 	topicConfigs := []kafka.TopicConfig{
 		{
 			Topic:             topic,
@@ -165,7 +175,7 @@ func (ew *ExportWorker) InitFilterTopics(serving *lib.Serving) (err error) {
 	}
 	if len(missingIds) > 0 {
 		for _, topic := range missingTopics {
-			err = ew.CreateFilterTopic(topic)
+			err = ew.CreateFilterTopic(topic, false)
 			if err != nil {
 				return
 			}

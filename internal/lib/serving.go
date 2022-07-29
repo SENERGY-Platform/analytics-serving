@@ -314,7 +314,7 @@ func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDa
 func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
 	database = populateExportDatabase(id, req, userId)
 	if driver, ok := f.driver.(ExportWorkerKafkaApi); ok {
-		err := driver.CreateFilterTopic(database.EwFilterTopic)
+		err := driver.CreateFilterTopic(database.EwFilterTopic, true)
 		if err != nil {
 			errs = append(errs, err)
 			return
