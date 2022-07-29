@@ -28,7 +28,9 @@ import (
 	"github.com/rs/cors"
 	"github.com/segmentio/kafka-go"
 	"log"
+	"net"
 	"net/http"
+	"strconv"
 )
 
 func CreateServer() {
@@ -100,8 +102,12 @@ func CreateServer() {
 	imp := import_deploy_api.NewImportDeployApi(lib.GetEnv("IMPORT_DEPLOY_API_ENDPOINT", ""))
 
 	e := NewEndpoint(driver, permission, pipeline, imp)
-	if selectedDriver == "ew" {
-		err = ew_api.InitTopics(lib.GetEnv("KAFKA_BOOTSTRAP", ""), e.serving)
+	if drvr, ok := driver.(lib.ExportWorkerKafkaApi); ok {
+		err = drvr.InitFilterTopics(e.serving)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 	}
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
 	router.HandleFunc("/instance", e.postNewServingInstance).Methods("POST")
