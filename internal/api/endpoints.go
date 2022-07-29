@@ -34,9 +34,8 @@ type Endpoint struct {
 	serving *lib.Serving
 }
 
-func NewEndpoint(driver lib.Driver, permissionService lib.PermissionApiService, pipelineService lib.PipelineApiService, importDeployService lib.ImportDeployService) *Endpoint {
-	ret := lib.NewServing(driver, permissionService, pipelineService, importDeployService)
-	return &Endpoint{ret}
+func NewEndpoint(serving *lib.Serving) *Endpoint {
+	return &Endpoint{serving: serving}
 }
 
 func (e *Endpoint) getRootEndpoint(w http.ResponseWriter, req *http.Request) {

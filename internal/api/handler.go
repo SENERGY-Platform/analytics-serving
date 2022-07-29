@@ -93,22 +93,21 @@ func CreateServer() {
 	default:
 		log.Println("No driver selected")
 	}
-
-	port := lib.GetEnv("API_PORT", "8000")
-	log.Print("Starting Server at port " + port + "\n")
-	router := mux.NewRouter()
 	permission := permission_api.NewPermissionApi(lib.GetEnv("PERMISSION_API_ENDPOINT", ""))
 	pipeline := pipeline_api.NewPipelineApi(lib.GetEnv("PIPELINE_API_ENDPOINT", ""))
 	imp := import_deploy_api.NewImportDeployApi(lib.GetEnv("IMPORT_DEPLOY_API_ENDPOINT", ""))
-
-	e := NewEndpoint(driver, permission, pipeline, imp)
+	serving := lib.NewServing(driver, permission, pipeline, imp)
 	if drvr, ok := driver.(lib.ExportWorkerKafkaApi); ok {
-		err = drvr.InitFilterTopics(e.serving)
+		err = drvr.InitFilterTopics(serving)
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
 	}
+	port := lib.GetEnv("API_PORT", "8000")
+	log.Print("Starting Server at port " + port + "\n")
+	router := mux.NewRouter()
+	e := NewEndpoint(serving)
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
 	router.HandleFunc("/instance", e.postNewServingInstance).Methods("POST")
 	router.HandleFunc("/instance", e.getServingInstances).Methods("GET")
