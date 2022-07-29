@@ -32,3 +32,8 @@ type PipelineApiService interface {
 type ImportDeployService interface {
 	UserHasImportAccess(id string, authorization string) (bool, error)
 }
+
+type ExportWorkerKafkaApi interface {
+	CreateFilterTopic(topic string) (err error)
+	InitFilterTopics(serving *Serving) (err error)
+}
