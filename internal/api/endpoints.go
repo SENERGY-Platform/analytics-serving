@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
@@ -304,7 +303,7 @@ func (e *Endpoint) writeExportDatabase(w http.ResponseWriter, req *http.Request)
 				var errs []error
 				switch req.Method {
 				case http.MethodPost:
-					database, errs = e.serving.CreateExportDatabase("urn:infai:ses:export-db:"+uuid.New().String(), databaseReq, userId)
+					database, errs = e.serving.CreateExportDatabase(databaseReq, userId)
 				case http.MethodPut:
 					vars := mux.Vars(req)
 					database, errs = e.serving.UpdateExportDatabase(vars["id"], databaseReq, userId)

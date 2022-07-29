@@ -96,7 +96,7 @@ func CreateServer() {
 	permission := permission_api.NewPermissionApi(lib.GetEnv("PERMISSION_API_ENDPOINT", ""))
 	pipeline := pipeline_api.NewPipelineApi(lib.GetEnv("PIPELINE_API_ENDPOINT", ""))
 	imp := import_deploy_api.NewImportDeployApi(lib.GetEnv("IMPORT_DEPLOY_API_ENDPOINT", ""))
-	serving := lib.NewServing(driver, permission, pipeline, imp)
+	serving := lib.NewServing(driver, permission, pipeline, imp, lib.GetEnv("EXPORT_DATABASE_ID_PREFIX", ""))
 	if drvr, ok := driver.(lib.ExportWorkerKafkaApi); ok {
 		err = drvr.InitFilterTopics(serving)
 		if err != nil {

@@ -28,16 +28,17 @@ import (
 )
 
 type Serving struct {
-	driver              Driver
-	influx              *Influx
-	permissionService   PermissionApiService
-	pipelineService     PipelineApiService
-	importDeployService ImportDeployService
+	driver                 Driver
+	influx                 *Influx
+	permissionService      PermissionApiService
+	pipelineService        PipelineApiService
+	importDeployService    ImportDeployService
+	exportDatabaseIdPrefix string
 }
 
-func NewServing(driver Driver, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService) *Serving {
+func NewServing(driver Driver, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string) *Serving {
 	influx := NewInflux()
-	return &Serving{driver, influx, permissionService, pipelineService, importDeployService}
+	return &Serving{driver, influx, permissionService, pipelineService, importDeployService, exportDatabaseIdPrefix}
 }
 
 func (f *Serving) CreateInstance(req ServingRequest, userId string, token string) (instance Instance, err error) {
@@ -311,7 +312,11 @@ func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDa
 	return
 }
 
-func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
+func (f *Serving) CreateExportDatabase(req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
+	id := uuid.New().String()
+	if f.exportDatabaseIdPrefix != "" {
+		id = f.exportDatabaseIdPrefix + id
+	}
 	database = populateExportDatabase(id, req, userId)
 	if driver, ok := f.driver.(ExportWorkerKafkaApi); ok {
 		err := driver.CreateFilterTopic(database.EwFilterTopic, true)
@@ -323,7 +328,7 @@ func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, use
 	DB.NewRecord(database)
 	errs = DB.Create(&database).GetErrors()
 	if len(errs) > 0 {
-		log.Println("creating export-database failed - " + id + " - " + fmt.Sprint(errs))
+		log.Println("creating export-database failed - " + fmt.Sprint(errs))
 		return
 	}
 	log.Println("successfully created export-database - " + database.ID)
