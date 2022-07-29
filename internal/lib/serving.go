@@ -313,6 +313,13 @@ func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDa
 
 func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
 	database = populateExportDatabase(id, req, userId)
+	if driver, ok := f.driver.(ExportWorkerKafkaApi); ok {
+		err := driver.CreateFilterTopic(database.EwFilterTopic)
+		if err != nil {
+			errs = append(errs, err)
+			return
+		}
+	}
 	DB.NewRecord(database)
 	errs = DB.Create(&database).GetErrors()
 	if len(errs) > 0 {
