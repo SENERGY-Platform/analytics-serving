@@ -170,7 +170,9 @@ func (ew *ExportWorker) InitFilterTopics(serving *lib.Serving) (err error) {
 	for _, database := range databases {
 		if !checkTopic(&partitions, database.EwFilterTopic) {
 			missingIds = append(missingIds, database.ID)
-			missingTopics = append(missingTopics, database.EwFilterTopic)
+			if !stringInSlice(&missingTopics, database.EwFilterTopic) {
+				missingTopics = append(missingTopics, database.EwFilterTopic)
+			}
 		}
 	}
 	if len(missingIds) > 0 {
