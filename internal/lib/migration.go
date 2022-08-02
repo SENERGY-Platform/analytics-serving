@@ -74,7 +74,6 @@ func (m *Migration) TmpMigrate() (err error) {
 		return
 	}
 	idPrefix := GetEnv("EXPORT_DATABASE_ID_PREFIX", "")
-	log.Println(idPrefix)
 	for key, val := range topicMap {
 		var errs []error
 		var instances []Instance
