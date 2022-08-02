@@ -63,6 +63,7 @@ type ExportDatabaseBase struct {
 }
 
 func (m *Migration) TmpMigrate() (err error) {
+	log.Println("RUNNING TEMPORARY MIGRATION!")
 	topicMap := map[string]string{}
 	err = json.Unmarshal([]byte(GetEnv("EW_FILTER_TOPIC_MAP", "")), &topicMap)
 	if err != nil {
