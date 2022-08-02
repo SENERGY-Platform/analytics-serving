@@ -33,5 +33,10 @@ func main() {
 	defer lib.Close()
 	m := lib.NewMigration(lib.GetDB())
 	m.Migrate()
+	err = m.TmpMigrate()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	api.CreateServer()
 }
