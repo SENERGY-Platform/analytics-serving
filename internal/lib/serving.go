@@ -340,6 +340,12 @@ func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, use
 func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
 	errs = DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
+		for _, err := range errs {
+			if gorm.IsRecordNotFoundError(err) {
+				database, errs = f.CreateExportDatabase(id, req, userId)
+				return
+			}
+		}
 		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
 		return
 	}
