@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"log"
 )
@@ -53,60 +52,69 @@ func (m *Migration) Migrate() {
 	DB.AutoMigrate(&ExportDatabase{})
 }
 
-type ExportDatabaseBase struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	External    bool   `json:"external"`
-	Url         string `json:"url"`
-	Public      bool   `json:"public"`
-	UserID      string `json:"user_id"`
+type MigrationInfo struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	Type          string `json:"type"`
+	External      bool   `json:"external"`
+	Url           string `json:"url"`
+	EwFilterTopic string `json:"ew_filter_topic"`
+	UserID        string `json:"user_id"`
+	Public        bool   `json:"public"`
 }
 
 func (m *Migration) TmpMigrate() (err error) {
-	log.Println("RUNNING TEMPORARY MIGRATION!")
-	topicMap := map[string]string{}
-	err = json.Unmarshal([]byte(GetEnv("EW_FILTER_TOPIC_MAP", "")), &topicMap)
-	if err != nil {
-		return
-	}
-	migrationMap := map[string]ExportDatabaseBase{}
-	err = json.Unmarshal([]byte(GetEnv("MIGRATION_MAP", "")), &migrationMap)
-	if err != nil {
-		return
-	}
-	idPrefix := GetEnv("EXPORT_DATABASE_ID_PREFIX", "")
-	for key, val := range topicMap {
-		var errs []error
+	migInfo := GetEnv("MIGRATION_INFO", "")
+	if migInfo != "" {
+		log.Println("RUNNING TEMPORARY MIGRATION!")
+		var migrationInfo MigrationInfo
+		err = json.Unmarshal([]byte(migInfo), &migrationInfo)
+		if err != nil {
+			return
+		}
+		var database ExportDatabase
+		errs := DB.Where("id = ?", migrationInfo.ID).First(&database).GetErrors()
+		if len(errs) > 0 {
+			err = errors.New(fmt.Sprint(errs))
+			for _, e := range errs {
+				if gorm.IsRecordNotFoundError(e) {
+					err = nil
+					database = ExportDatabase{
+						ID:            migrationInfo.ID,
+						Name:          migrationInfo.Name,
+						Description:   migrationInfo.Description,
+						Type:          migrationInfo.Type,
+						External:      migrationInfo.External,
+						Url:           migrationInfo.Url,
+						EwFilterTopic: migrationInfo.EwFilterTopic,
+						UserId:        migrationInfo.UserID,
+						Public:        migrationInfo.Public,
+					}
+					log.Println(fmt.Sprintf("generated ExportDatabase: %+v", database))
+					DB.NewRecord(database)
+					errs2 := DB.Create(&database).GetErrors()
+					if len(errs2) > 0 {
+						err = errors.New(fmt.Sprint(errs2))
+						return
+					}
+					break
+				}
+			}
+			if err != nil {
+				return
+			}
+		} else {
+			log.Println("export-database with ID '" + database.ID + "' already exists")
+		}
 		var instances []Instance
-		DB.Where("database_type = ? AND (export_database_id IS null OR export_database_id = ?)", key, "").Find(&instances).GetErrors()
+		errs = DB.Where("export_database_id IS null OR export_database_id = ?", "").Find(&instances).GetErrors()
 		if len(errs) > 0 {
 			err = errors.New(fmt.Sprint(errs))
 			return
 		}
 		if len(instances) > 0 {
-			log.Println(fmt.Sprintf("found %d exports for '%s'", len(instances), key))
-			id := uuid.New().String()
-			if idPrefix != "" {
-				id = idPrefix + id
-			}
-			database := ExportDatabase{
-				ID:            id,
-				Name:          migrationMap[key].Name,
-				Description:   migrationMap[key].Description,
-				Type:          key,
-				External:      migrationMap[key].External,
-				Url:           migrationMap[key].Url,
-				EwFilterTopic: val,
-				UserId:        migrationMap[key].UserID,
-				Public:        migrationMap[key].Public,
-			}
-			log.Println(fmt.Sprintf("generated ExportDatabase: %+v", database))
-			DB.NewRecord(database)
-			errs = DB.Create(&database).GetErrors()
-			if len(errs) > 0 {
-				err = errors.New(fmt.Sprint(errs))
-				return
-			}
+			log.Println(fmt.Sprintf("found %d exports", len(instances)))
 			for _, instance := range instances {
 				log.Println("migrating export '" + instance.ID.String() + "'")
 				instance.ExportDatabaseID = database.ID
