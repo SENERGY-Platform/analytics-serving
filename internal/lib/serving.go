@@ -312,10 +312,12 @@ func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDa
 	return
 }
 
-func (f *Serving) CreateExportDatabase(req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
-	id := uuid.New().String()
-	if f.exportDatabaseIdPrefix != "" {
-		id = f.exportDatabaseIdPrefix + id
+func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
+	if id == "" {
+		id = uuid.New().String()
+		if f.exportDatabaseIdPrefix != "" {
+			id = f.exportDatabaseIdPrefix + id
+		}
 	}
 	database = populateExportDatabase(id, req, userId)
 	if driver, ok := f.driver.(ExportWorkerKafkaApi); ok {
