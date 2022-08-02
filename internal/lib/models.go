@@ -41,7 +41,6 @@ type Instance struct {
 	Generated        bool           `gorm:"type:bool;DEFAULT:false"`
 	RancherServiceId string         `gorm:"type:varchar(255)"`
 	Offset           string         `gorm:"type:varchar(255)"`
-	DatabaseType     string         `gorm:"type:varchar(255)"`
 	ExportDatabaseID string         `gorm:"type:varchar(255)"`
 	ExportDatabase   ExportDatabase `gorm:"association_autoupdate:false;association_autocreate:false"`
 	TimestampFormat  string         `gorm:"type:varchar(255)"`
