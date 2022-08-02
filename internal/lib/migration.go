@@ -17,9 +17,12 @@
 package lib
 
 import (
-	"log"
-
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
+	"log"
 )
 
 type Migration struct {
@@ -48,4 +51,73 @@ func (m *Migration) Migrate() {
 		DB.CreateTable(&ExportDatabase{})
 	}
 	DB.AutoMigrate(&ExportDatabase{})
+}
+
+type ExportDatabaseBase struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	External    bool   `json:"external"`
+	Url         string `json:"url"`
+	Public      bool   `json:"public"`
+	UserID      string `json:"user_id"`
+}
+
+func (m *Migration) TmpMigrate() (err error) {
+	topicMap := map[string]string{}
+	err = json.Unmarshal([]byte(GetEnv("EW_FILTER_TOPIC_MAP", "")), &topicMap)
+	if err != nil {
+		return
+	}
+	migrationMap := map[string]ExportDatabaseBase{}
+	err = json.Unmarshal([]byte(GetEnv("MIGRATION_MAP", "")), &migrationMap)
+	if err != nil {
+		return
+	}
+	idPrefix := GetEnv("EXPORT_DATABASE_ID_PREFIX", "")
+	log.Println(idPrefix)
+	for key, val := range topicMap {
+		var errs []error
+		var instances []Instance
+		DB.Where("database_type = ? AND (export_database_id IS null OR export_database_id = ?)", key, "").Find(&instances).GetErrors()
+		if len(errs) > 0 {
+			err = errors.New(fmt.Sprint(errs))
+			return
+		}
+		if len(instances) > 0 {
+			log.Println(fmt.Sprintf("found %d exports for '%s'", len(instances), key))
+			id := uuid.New().String()
+			if idPrefix != "" {
+				id = idPrefix + id
+			}
+			database := ExportDatabase{
+				ID:            id,
+				Name:          migrationMap[key].Name,
+				Description:   migrationMap[key].Description,
+				Type:          key,
+				External:      migrationMap[key].External,
+				Url:           migrationMap[key].Url,
+				EwFilterTopic: val,
+				UserId:        migrationMap[key].UserID,
+				Public:        migrationMap[key].Public,
+			}
+			log.Println(fmt.Sprintf("generated ExportDatabase: %+v", database))
+			DB.NewRecord(database)
+			errs = DB.Create(&database).GetErrors()
+			if len(errs) > 0 {
+				err = errors.New(fmt.Sprint(errs))
+				return
+			}
+			for _, instance := range instances {
+				log.Println("migrating export '" + instance.ID.String() + "'")
+				instance.ExportDatabaseID = database.ID
+				instance.ExportDatabase = database
+				errs = DB.Save(&instance).GetErrors()
+				if len(errs) > 0 {
+					err = errors.New(fmt.Sprint(errs))
+					return
+				}
+			}
+		}
+	}
+	return
 }
