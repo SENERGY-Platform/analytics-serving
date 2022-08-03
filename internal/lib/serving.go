@@ -172,13 +172,10 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 			tx = tx.Where("export_database_id = ?", value[0])
 			countTx = countTx.Where("export_database_id = ?", value[0])
 		}
-		if arg == "external" {
+		if arg == "internal_only" {
 			if value[0] == "true" {
-				tx = tx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("external = TRUE AND (public = TRUE OR user_id = ?)", userId).SubQuery())
-				countTx = countTx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("external = TRUE AND (public = TRUE OR user_id = ?)", userId).SubQuery())
-			} else {
-				tx = tx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("external = FALSE AND (public = TRUE OR user_id = ?)", userId).SubQuery())
-				countTx = countTx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("external = FALSE AND (public = TRUE OR user_id = ?)", userId).SubQuery())
+				tx = tx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("deployment = ? AND (public = TRUE OR user_id = ?)", "internal", userId).SubQuery())
+				countTx = countTx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("deployment = ? AND (public = TRUE OR user_id = ?)", "internal", userId).SubQuery())
 			}
 		}
 	}
