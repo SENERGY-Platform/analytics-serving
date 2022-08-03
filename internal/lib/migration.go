@@ -57,7 +57,7 @@ type MigrationInfo struct {
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	Type          string `json:"type"`
-	External      bool   `json:"external"`
+	Deployment    string `json:"deployment"`
 	Url           string `json:"url"`
 	EwFilterTopic string `json:"ew_filter_topic"`
 	UserID        string `json:"user_id"`
@@ -85,7 +85,7 @@ func (m *Migration) TmpMigrate() (err error) {
 						Name:          migrationInfo.Name,
 						Description:   migrationInfo.Description,
 						Type:          migrationInfo.Type,
-						External:      migrationInfo.External,
+						Deployment:    migrationInfo.Deployment,
 						Url:           migrationInfo.Url,
 						EwFilterTopic: migrationInfo.EwFilterTopic,
 						UserId:        migrationInfo.UserID,

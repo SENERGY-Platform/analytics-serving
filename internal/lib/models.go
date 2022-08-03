@@ -62,7 +62,7 @@ type ExportDatabase struct {
 	Name          string `gorm:"type:varchar(255)"`
 	Description   string `gorm:"type:varchar(255)"`
 	Type          string `gorm:"type:varchar(255)"`
-	External      bool   `gorm:"type:bool;DEFAULT:false"`
+	Deployment    string `gorm:"type:varchar(255)"`
 	Url           string `gorm:"type:varchar(255)"`
 	EwFilterTopic string `gorm:"type:varchar(255)"`
 	UserId        string `gorm:"type:varchar(255)"`

@@ -60,7 +60,7 @@ type ExportDatabaseRequest struct {
 	Name          string `json:"Name" validate:"required"`
 	Description   string `json:"Description"`
 	Type          string `json:"Type" validate:"required"`
-	External      bool   `json:"External"`
+	Deployment    string `json:"deployment" validate:"required"`
 	Url           string `json:"Url" validate:"required"`
 	EwFilterTopic string `json:"EwFilterTopic" validate:"required"`
 	Public        bool   `json:"Public"`
