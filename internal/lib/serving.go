@@ -443,7 +443,7 @@ func populateExportDatabase(id string, req ExportDatabaseRequest, userId string)
 		Name:          req.Name,
 		Description:   req.Description,
 		Type:          req.Type,
-		External:      req.External,
+		Deployment:    req.Deployment,
 		Url:           req.Url,
 		EwFilterTopic: req.EwFilterTopic,
 		Public:        req.Public,
