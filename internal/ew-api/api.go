@@ -57,12 +57,17 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		return
 	}
 	genIdentifiers(&filter.Identifiers, instance.FilterType, instance.Filter, instance.Topic)
-	err = genMappings(filter.Mappings, dataFieldsMap, tagFieldsMap)
 	if err != nil {
 		return
 	}
 	switch instance.ExportDatabase.Type {
 	case InfluxDB:
+		if len(dataFieldsMap) > 0 {
+			addMappings(filter.Mappings, dataFieldsMap, MappingData)
+		}
+		if len(tagFieldsMap) > 0 {
+			addMappings(filter.Mappings, tagFieldsMap, MappingExtra)
+		}
 		addInfluxDBTimeMapping(filter.Mappings, instance.TimePath)
 		influxDBExportArgs := InfluxDBExportArgs{}
 		err = genInfluxExportArgs(&influxDBExportArgs, instance.Database, instance.TimePath, instance.TimePrecision, dataFieldsMap, tagFieldsMap)
@@ -71,6 +76,9 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		}
 		filter.Args = influxDBExportArgs
 	case TimescaleDB:
+		if len(dataFieldsMap) > 0 {
+			addMappings(filter.Mappings, dataFieldsMap, MappingData)
+		}
 		err = addTimescaleDBTimeMapping(filter.Mappings, instance.TimePath)
 		if err != nil {
 			return

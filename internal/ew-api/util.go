@@ -59,16 +59,6 @@ func addMappings(mappings map[string]string, fieldsMap map[string]string, mappin
 	}
 }
 
-func genMappings(mappings map[string]string, dataFieldsMap map[string]string, tagFieldsMap map[string]string) (err error) {
-	if len(dataFieldsMap) > 0 {
-		err = addMappings(mappings, dataFieldsMap, MappingData)
-	}
-	if len(tagFieldsMap) > 0 {
-		err = addMappings(mappings, tagFieldsMap, MappingExtra)
-	}
-	return
-}
-
 func shortenId(longId string) (string, error) {
 	parts := strings.Split(longId, ":")
 	noPrefix := parts[len(parts)-1]
