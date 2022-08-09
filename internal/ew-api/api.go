@@ -46,8 +46,18 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		Mappings:    map[string]string{},
 		ID:          instance.ID.String(),
 	}
+	var dataFieldsMap map[string]string
+	err = genFieldsMap(&dataFieldsMap, &dataFields)
+	if err != nil {
+		return
+	}
+	var tagFieldsMap map[string]string
+	err = genFieldsMap(&tagFieldsMap, &tagFields)
+	if err != nil {
+		return
+	}
 	genIdentifiers(&filter.Identifiers, instance.FilterType, instance.Filter, instance.Topic)
-	err = genMappings(filter.Mappings, &dataFields, &tagFields)
+	err = genMappings(filter.Mappings, dataFieldsMap, tagFieldsMap)
 	if err != nil {
 		return
 	}
@@ -55,7 +65,7 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 	case InfluxDB:
 		addInfluxDBTimeMapping(filter.Mappings, instance.TimePath)
 		influxDBExportArgs := InfluxDBExportArgs{}
-		err = genInfluxExportArgs(&influxDBExportArgs, instance.Database, instance.TimePath, instance.TimePrecision, &dataFields, &tagFields)
+		err = genInfluxExportArgs(&influxDBExportArgs, instance.Database, instance.TimePath, instance.TimePrecision, dataFieldsMap, tagFieldsMap)
 		if err != nil {
 			return
 		}
@@ -66,7 +76,7 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 			return
 		}
 		timescaleDBExportArgs := TimescaleDBExportArgs{}
-		err = genTimescaleDBExportArgs(&timescaleDBExportArgs, instance.ID.String(), instance.Database, instance.TimePath, instance.TimestampFormat, &dataFields)
+		err = genTimescaleDBExportArgs(&timescaleDBExportArgs, instance.ID.String(), instance.Database, instance.TimePath, instance.TimestampFormat, dataFieldsMap)
 		if err != nil {
 			return
 		}

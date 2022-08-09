@@ -47,12 +47,12 @@ func genIdentifiers(identifiers *[]Identifier, filterType string, filter string,
 	}
 }
 
-func addMappings(mappings map[string]string, fields *string, mappingType string) (err error) {
-	fieldsMap := map[string]string{}
+func genFieldsMap(fieldsMap *map[string]string, fields *string) (err error) {
 	err = json.Unmarshal([]byte(*fields), &fieldsMap)
-	if err != nil {
-		return
-	}
+	return
+}
+
+func addMappings(mappings map[string]string, fieldsMap map[string]string, mappingType string) (err error) {
 	for key, val := range fieldsMap {
 		dst := strings.Split(key, ":")
 		mappings[dst[0]+mappingType] = val
@@ -60,12 +60,12 @@ func addMappings(mappings map[string]string, fields *string, mappingType string)
 	return
 }
 
-func genMappings(mappings map[string]string, dataFields *string, tagFields *string) (err error) {
-	if *dataFields != "" {
-		err = addMappings(mappings, dataFields, MappingData)
+func genMappings(mappings map[string]string, dataFieldsMap map[string]string, tagFieldsMap map[string]string) (err error) {
+	if len(dataFieldsMap) > 0 {
+		err = addMappings(mappings, dataFieldsMap, MappingData)
 	}
-	if *tagFields != "" {
-		err = addMappings(mappings, tagFields, MappingExtra)
+	if len(tagFieldsMap) > 0 {
+		err = addMappings(mappings, tagFieldsMap, MappingExtra)
 	}
 	return
 }

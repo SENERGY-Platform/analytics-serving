@@ -1,7 +1,6 @@
 package ew_api
 
 import (
-	"encoding/json"
 	"strings"
 )
 
@@ -31,12 +30,7 @@ func addInfluxDBTimeMapping(mappings map[string]string, timePath string) {
 	}
 }
 
-func addInfluxDBCast(castMap map[string]string, fields *string) (err error) {
-	fieldsMap := map[string]string{}
-	err = json.Unmarshal([]byte(*fields), &fieldsMap)
-	if err != nil {
-		return
-	}
+func addInfluxDBCast(castMap map[string]string, fieldsMap map[string]string) (err error) {
 	for key, _ := range fieldsMap {
 		dst := strings.Split(key, ":")
 		castMap[dst[0]] = influxDBTypeMap[dst[1]]
@@ -44,13 +38,13 @@ func addInfluxDBCast(castMap map[string]string, fields *string) (err error) {
 	return
 }
 
-func genInfluxExportArgs(args *InfluxDBExportArgs, dbName string, timePath string, timePrecision *string, dataFields *string, tagFields *string) (err error) {
+func genInfluxExportArgs(args *InfluxDBExportArgs, dbName string, timePath string, timePrecision *string, dataFieldsMap map[string]string, tagFieldsMap map[string]string) (err error) {
 	castMap := map[string]string{}
-	if *dataFields != "" {
-		err = addInfluxDBCast(castMap, dataFields)
+	if len(dataFieldsMap) > 0 {
+		err = addInfluxDBCast(castMap, dataFieldsMap)
 	}
-	if *tagFields != "" {
-		err = addInfluxDBCast(castMap, tagFields)
+	if len(tagFieldsMap) > 0 {
+		err = addInfluxDBCast(castMap, tagFieldsMap)
 	}
 	args.TypeCasts = castMap
 	args.DBName = dbName

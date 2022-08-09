@@ -1,7 +1,6 @@
 package ew_api
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 )
@@ -31,12 +30,7 @@ func addTimescaleDBTimeMapping(mappings map[string]string, timePath string) (err
 	return
 }
 
-func addColumns(columns *[][3]string, fields *string, timePath string) (err error) {
-	fieldsMap := map[string]string{}
-	err = json.Unmarshal([]byte(*fields), &fieldsMap)
-	if err != nil {
-		return
-	}
+func addColumns(columns *[][3]string, fieldsMap map[string]string, timePath string) (err error) {
 	tp := strings.Split(timePath, ".")
 	*columns = append(*columns, [3]string{tp[len(tp)-1], "TIMESTAMP", "NOT NULL"})
 	for key, _ := range fieldsMap {
@@ -46,7 +40,7 @@ func addColumns(columns *[][3]string, fields *string, timePath string) (err erro
 	return
 }
 
-func genTimescaleDBExportArgs(args *TimescaleDBExportArgs, exportID string, dbName string, timePath string, timeFormat string, dataFields *string) (err error) {
+func genTimescaleDBExportArgs(args *TimescaleDBExportArgs, exportID string, dbName string, timePath string, timeFormat string, dataFieldsMap map[string]string) (err error) {
 	if timePath == "" {
 		err = errors.New("column containing timestamps required")
 		return
@@ -72,8 +66,8 @@ func genTimescaleDBExportArgs(args *TimescaleDBExportArgs, exportID string, dbNa
 	}
 	args.TableName = "userid:" + shortDBName + "_export:" + shortExportID
 	var columns [][3]string
-	if *dataFields != "" {
-		err = addColumns(&columns, dataFields, timePath)
+	if len(dataFieldsMap) > 0 {
+		err = addColumns(&columns, dataFieldsMap, timePath)
 		if err != nil {
 			return
 		}
