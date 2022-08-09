@@ -52,12 +52,11 @@ func genFieldsMap(fieldsMap *map[string]string, fields *string) (err error) {
 	return
 }
 
-func addMappings(mappings map[string]string, fieldsMap map[string]string, mappingType string) (err error) {
+func addMappings(mappings map[string]string, fieldsMap map[string]string, mappingType string) {
 	for key, val := range fieldsMap {
 		dst := strings.Split(key, ":")
 		mappings[dst[0]+mappingType] = val
 	}
-	return
 }
 
 func genMappings(mappings map[string]string, dataFieldsMap map[string]string, tagFieldsMap map[string]string) (err error) {
