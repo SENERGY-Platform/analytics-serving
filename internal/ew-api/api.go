@@ -76,15 +76,25 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 		}
 		filter.Args = influxDBExportArgs
 	case TimescaleDB:
+		fieldsMap := map[string]string{}
 		if len(dataFieldsMap) > 0 {
 			addMappings(filter.Mappings, dataFieldsMap, MappingData)
+			for k, v := range dataFieldsMap {
+				fieldsMap[k] = v
+			}
+		}
+		if len(tagFieldsMap) > 0 {
+			addMappings(filter.Mappings, tagFieldsMap, MappingData)
+			for k, v := range tagFieldsMap {
+				fieldsMap[k] = v
+			}
 		}
 		err = addTimescaleDBTimeMapping(filter.Mappings, instance.TimePath)
 		if err != nil {
 			return
 		}
 		timescaleDBExportArgs := TimescaleDBExportArgs{}
-		err = genTimescaleDBExportArgs(&timescaleDBExportArgs, instance.ID.String(), instance.Database, instance.TimePath, instance.TimestampFormat, dataFieldsMap)
+		err = genTimescaleDBExportArgs(&timescaleDBExportArgs, instance.ID.String(), instance.Database, instance.TimePath, instance.TimestampFormat, fieldsMap)
 		if err != nil {
 			return
 		}
