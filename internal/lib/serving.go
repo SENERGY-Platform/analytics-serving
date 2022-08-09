@@ -207,7 +207,7 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	if admin {
 		tx = DB.Where("id = ?", id)
 	}
-	errors = tx.First(&instance).GetErrors()
+	errors = tx.Preload("ExportDatabase").First(&instance).GetErrors()
 	if len(errors) > 0 {
 		log.Println(errors)
 		return
