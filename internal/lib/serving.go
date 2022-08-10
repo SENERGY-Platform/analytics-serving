@@ -225,15 +225,18 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 		errors = append(errors, err)
 		return
 	} else {
+		deleted = true
+		errors = DB.Delete(&instance).GetErrors()
 		if instance.ExportDatabase.Type == "influxdb" {
-			errors = f.influx.forceDeleteMeasurement(id, userId, instance)
+			errs := f.influx.forceDeleteMeasurement(id, userId, instance)
+			if len(errs) > 0 {
+				for _, e := range errs {
+					errors = append(errors, e)
+				}
+			}
 		}
 	}
-	if len(errors) > 0 {
-		return
-	}
-	DB.Delete(&instance)
-	return true, errors
+	return
 }
 
 func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
