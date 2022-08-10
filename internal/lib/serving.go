@@ -95,7 +95,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 		errors = append(errors, err)
 		return
 	}
-	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").First(&instance).GetErrors()
+	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
 	if len(errors) > 0 {
 		return
 	}
