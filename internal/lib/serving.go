@@ -209,7 +209,12 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	}
 	errors = tx.Preload("ExportDatabase").First(&instance).GetErrors()
 	if len(errors) > 0 {
-		log.Println(errors)
+		for _, e := range errors {
+			if gorm.IsRecordNotFoundError(e) {
+				errors = nil
+				return
+			}
+		}
 		return
 	}
 	err := retry(5, 5*time.Second, func() (err error) {
