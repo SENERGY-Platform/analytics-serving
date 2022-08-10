@@ -368,8 +368,14 @@ func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, use
 		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
 		return
 	}
+	dbType := database.Type
+	dbEwFilterTopic := database.EwFilterTopic
 	database = populateExportDatabase(id, req, userId)
-	errs = DB.Save(&database).GetErrors()
+	if database.Type != dbType || database.EwFilterTopic != dbEwFilterTopic {
+		errs = append(errs, errors.New("changing 'Type' or 'EwFilterTopic' not allowed"))
+	} else {
+		errs = DB.Save(&database).GetErrors()
+	}
 	if len(errs) > 0 {
 		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
 		return
