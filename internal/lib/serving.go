@@ -223,6 +223,7 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 	})
 	if err != nil {
 		errors = append(errors, err)
+		return
 	} else {
 		if instance.ExportDatabase.Type == "influxdb" {
 			errors = f.influx.forceDeleteMeasurement(id, userId, instance)
