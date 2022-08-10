@@ -71,7 +71,19 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req Servin
 		return
 	} else {
 		DB.NewRecord(instance)
-		DB.Create(&instance)
+		errs = DB.Create(&instance).GetErrors()
+		if len(errs) > 0 {
+			err2 := retry(5, 5*time.Second, func() (e error) {
+				e = f.driver.DeleteInstance(&instance)
+				return
+			})
+			if err2 != nil {
+				errs = append(errs, err2)
+			}
+			err = errors.New("serving - creating export failed - " + fmt.Sprint(errs))
+			log.Println(err)
+			return
+		}
 		log.Println("serving - successfully created export - " + instance.ID.String())
 	}
 	return
