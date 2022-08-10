@@ -79,7 +79,7 @@ func (i *Influx) GetMeasurements(userId string) (measurements []string, err erro
 func (i *Influx) forceDeleteMeasurement(id string, userId string, instance Instance) (errs []error) {
 	defer func() {
 		if err := recover(); err != nil {
-			errs = append(errs, errors.New("force delete measurement failed - panic occurred: "+fmt.Sprint(err)))
+			errs = append(errs, errors.New("force delete influx measurement failed - panic occurred: "+fmt.Sprint(err)))
 		}
 	}()
 	for {
