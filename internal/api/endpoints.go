@@ -208,15 +208,20 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 	userId, admin := getUserInfo(req)
 	deleted, errors := e.serving.DeleteInstance(vars["id"], userId, admin)
 	w.Header().Set("Content-Type", "application/json")
-	if len(errors) > 0 && deleted == false {
-		w.WriteHeader(404)
-	} else if len(errors) > 0 {
-		for _, err := range errors {
+	if len(errors) == 0 && deleted == true {
+		w.WriteHeader(http.StatusNoContent)
+	} else if len(errors) == 0 && deleted == false {
+		w.WriteHeader(http.StatusNotFound)
+	} else if len(errors) > 0 && deleted == true {
+		w.WriteHeader(http.StatusMultiStatus)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	if len(errors) > 0 {
+		err := json.NewEncoder(w).Encode(map[string]string{"deleted": fmt.Sprint(deleted), "error": fmt.Sprint(errors)})
+		if err != nil {
 			log.Println(err)
 		}
-		w.WriteHeader(500)
-	} else {
-		w.WriteHeader(204)
 	}
 }
 
