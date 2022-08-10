@@ -17,6 +17,8 @@
 package lib
 
 import (
+	"errors"
+	"fmt"
 	"log"
 
 	influxClient "github.com/influxdata/influxdb1-client/v2"
@@ -74,15 +76,20 @@ func (i *Influx) GetMeasurements(userId string) (measurements []string, err erro
 	return measurements, err
 }
 
-func (i *Influx) forceDeleteMeasurement(id string, userId string, instance Instance) (errors []error) {
+func (i *Influx) forceDeleteMeasurement(id string, userId string, instance Instance) (errs []error) {
+	defer func() {
+		if err := recover(); err != nil {
+			errs = append(errs, errors.New("force delete measurement failed - panic occurred: "+fmt.Sprint(err)))
+		}
+	}()
 	for {
-		errors = i.DropMeasurement(instance)
-		if len(errors) > 0 {
+		errs = i.DropMeasurement(instance)
+		if len(errs) > 0 {
 			return
 		}
 		measurements, err := i.GetMeasurements(userId)
 		if err != nil {
-			errors = append(errors, err)
+			errs = append(errs, err)
 			return
 		}
 		if !StringInSlice(id, measurements) {
