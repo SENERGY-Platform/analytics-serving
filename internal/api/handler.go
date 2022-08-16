@@ -61,6 +61,9 @@ func CreateServer() {
 		kafkaProducer := kafka.Writer{
 			Addr:        kafka.TCP(addr),
 			MaxAttempts: 5,
+			Async:       false,
+			BatchSize:   1,
+			Balancer:    &kafka.Hash{},
 		}
 		defer func(producer *kafka.Writer) {
 			_ = producer.Close()
