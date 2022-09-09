@@ -24,15 +24,17 @@ func addTimescaleDBTimeMapping(mappings map[string]string, timePath string) (err
 		err = errors.New("column containing timestamps required")
 		return
 	} else {
-		dst := strings.Split(timePath, ".")
-		mappings[dst[len(dst)-1]+MappingData] = timePath
+		//dst := strings.Split(timePath, ".")
+		//mappings[dst[len(dst)-1]+MappingData] = timePath
+		mappings["time"+MappingData] = timePath
 	}
 	return
 }
 
 func addColumns(columns *[][3]string, fieldsMap map[string]string, timePath string) (err error) {
-	tp := strings.Split(timePath, ".")
-	*columns = append(*columns, [3]string{tp[len(tp)-1], "TIMESTAMP", "NOT NULL"})
+	//tp := strings.Split(timePath, ".")
+	//*columns = append(*columns, [3]string{tp[len(tp)-1], "TIMESTAMP", "NOT NULL"})
+	*columns = append(*columns, [3]string{"time", "TIMESTAMP", "NOT NULL"})
 	for key, _ := range fieldsMap {
 		dst := strings.Split(key, ":")
 		*columns = append(*columns, [3]string{dst[0], timescaleDBTypeMap[dst[1]][0], timescaleDBTypeMap[dst[1]][1]})
@@ -45,8 +47,9 @@ func genTimescaleDBExportArgs(args *TimescaleDBExportArgs, exportID string, dbNa
 		err = errors.New("column containing timestamps required")
 		return
 	} else {
-		dst := strings.Split(timePath, ".")
-		args.TimeColumn = dst[len(dst)-1]
+		//dst := strings.Split(timePath, ".")
+		//args.TimeColumn = dst[len(dst)-1]
+		args.TimeColumn = "time"
 	}
 	if timeFormat == "" {
 		err = errors.New("timestamp format required")
