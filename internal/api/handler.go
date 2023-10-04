@@ -17,13 +17,13 @@
 package api
 
 import (
-	ew_api "analytics-serving/internal/ew-api"
-	import_deploy_api "analytics-serving/internal/import-deploy-api"
-	"analytics-serving/internal/lib"
-	permission_api "analytics-serving/internal/permission-api"
-	pipeline_api "analytics-serving/internal/pipeline-api"
-	rancher_api "analytics-serving/internal/rancher-api"
-	rancher2_api "analytics-serving/internal/rancher2-api"
+	ew_api "github.com/SENERGY-Platform/analytics-serving/internal/ew-api"
+	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/internal/import-deploy-api"
+	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
+	permission_api "github.com/SENERGY-Platform/analytics-serving/internal/permission-api"
+	pipeline_api "github.com/SENERGY-Platform/analytics-serving/internal/pipeline-api"
+	rancher_api "github.com/SENERGY-Platform/analytics-serving/internal/rancher-api"
+	rancher2_api "github.com/SENERGY-Platform/analytics-serving/internal/rancher2-api"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/segmentio/kafka-go"

@@ -17,8 +17,8 @@
 package main
 
 import (
-	"analytics-serving/internal/api"
-	"analytics-serving/internal/lib"
+	"github.com/SENERGY-Platform/analytics-serving/internal/api"
+	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
 	"log"
 
 	"github.com/joho/godotenv"

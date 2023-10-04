@@ -1,11 +1,11 @@
 package ew_api
 
 import (
-	"analytics-serving/internal/lib"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"strings"

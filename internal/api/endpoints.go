@@ -17,9 +17,9 @@
 package api
 
 import (
-	"analytics-serving/internal/lib"
 	"encoding/json"
 	"fmt"
+	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
 	"github.com/golang-jwt/jwt"
 	"github.com/jinzhu/gorm"
 	"log"

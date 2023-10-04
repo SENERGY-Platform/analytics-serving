@@ -17,8 +17,8 @@
 package rancher_api
 
 import (
-	"analytics-serving/internal/lib"
 	"errors"
+	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
 	"net/http"
 
 	"github.com/parnurzeal/gorequest"

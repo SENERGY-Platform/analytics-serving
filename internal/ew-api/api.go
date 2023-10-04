@@ -17,11 +17,11 @@
 package ew_api
 
 import (
-	"analytics-serving/internal/lib"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
 	"github.com/jinzhu/gorm"
 	"github.com/segmentio/kafka-go"
 	"log"
