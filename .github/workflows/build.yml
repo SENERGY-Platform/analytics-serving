@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
 jobs:
@@ -31,6 +33,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          release_branches: ".*"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build and push
         uses: docker/build-push-action@v2
@@ -42,3 +50,7 @@ jobs:
           tags: |
             smartenergyplatform/analytics-serving-service:latest
             ghcr.io/senergy-platform/analytics-serving-service:latest
+            smartenergyplatform/analytics-serving-service:prod
+            ghcr.io/senergy-platform/analytics-serving-service:prod
+            smartenergyplatform/analytics-serving-service:${{ steps.tag_version.outputs.new_tag }}
+            ghcr.io/senergy-platform/analytics-serving-service:${{ steps.tag_version.outputs.new_tag }}
