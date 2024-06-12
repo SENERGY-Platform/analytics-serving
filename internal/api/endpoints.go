@@ -105,8 +105,9 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
-	userId, _ := getUserInfo(req)
-	instance, errors := e.serving.GetInstance(vars["id"], userId)
+	token := getToken(req)
+	userId, _ := getUserInfoFromToken(token)
+	instance, errors := e.serving.GetInstance(vars["id"], userId, token)
 	if len(errors) > 0 {
 		for _, err := range errors {
 			log.Println(err)
@@ -121,8 +122,9 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	args := req.URL.Query()
-	userId, _ := getUserInfo(req)
-	instances, total, errors := e.serving.GetInstancesForUser(userId, args)
+	token := getToken(req)
+	userId, _ := getUserInfoFromToken(token)
+	instances, total, errors := e.serving.GetInstancesForUser(userId, args, token)
 	if len(errors) > 0 {
 		log.Println(errors)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -138,8 +140,9 @@ func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request)
 
 func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	userId, _ := getUserInfo(req)
-	deleted, errors := e.serving.DeleteInstanceForUser(vars["id"], userId)
+	token := getToken(req)
+	userId, _ := getUserInfoFromToken(token)
+	deleted, errors := e.serving.DeleteInstanceForUser(vars["id"], userId, token)
 	w.Header().Set("Content-Type", "application/json")
 	if len(errors) == 0 && deleted == true {
 		w.WriteHeader(http.StatusNoContent)
@@ -166,8 +169,9 @@ func (e *Endpoint) deleteServingInstances(w http.ResponseWriter, req *http.Reque
 		log.Println(err)
 	}
 	defer req.Body.Close()
-	userId, _ := getUserInfo(req)
-	deleted, errors := e.serving.DeleteInstancesForUser(requestBody, userId)
+	token := getToken(req)
+	userId, _ := getUserInfoFromToken(token)
+	deleted, errors := e.serving.DeleteInstancesForUser(requestBody, userId, token)
 	w.Header().Set("Content-Type", "application/json")
 	if len(errors) > 0 && len(deleted) < 1 {
 		for _, err := range errors {
@@ -186,10 +190,11 @@ func (e *Endpoint) deleteServingInstances(w http.ResponseWriter, req *http.Reque
 
 func (e *Endpoint) getServingInstancesAdmin(w http.ResponseWriter, req *http.Request) {
 	args := req.URL.Query()
-	userId, admin := getUserInfo(req)
+	token := getToken(req)
+	userId, admin := getUserInfoFromToken(token)
 	w.Header().Set("Content-Type", "application/json")
 	if admin {
-		instances, _, errors := e.serving.GetInstances(userId, args, admin)
+		instances, _, errors := e.serving.GetInstances(userId, args, admin, token)
 		if len(errors) > 0 {
 			log.Println(errors)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -205,8 +210,9 @@ func (e *Endpoint) getServingInstancesAdmin(w http.ResponseWriter, req *http.Req
 
 func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	userId, admin := getUserInfo(req)
-	deleted, errors := e.serving.DeleteInstance(vars["id"], userId, admin)
+	token := getToken(req)
+	userId, admin := getUserInfoFromToken(token)
+	deleted, errors := e.serving.DeleteInstance(vars["id"], userId, admin, token)
 	w.Header().Set("Content-Type", "application/json")
 	if len(errors) == 0 && deleted == true {
 		w.WriteHeader(http.StatusNoContent)
@@ -374,20 +380,25 @@ func (e *Endpoint) deleteExportDatabase(w http.ResponseWriter, req *http.Request
 	}
 }
 
-func getUserInfo(req *http.Request) (userId string, admin bool) {
-	//userId = req.Header.Get("X-UserId")
-	if userId == "" {
-		if len(req.Header.Get("Authorization")) > 0 {
-			_, claims := parseJWTToken(req.Header.Get("Authorization")[7:])
-			userId = claims.Sub
-			admin = claims.IsAdmin()
-			if userId == "" {
-				userId = "dummy"
-				admin = false
-			}
+func getToken(req *http.Request) string {
+	return req.Header.Get("Authorization")
+}
+
+func getUserInfoFromToken(token string) (userId string, admin bool) {
+	if len(token) > 0 {
+		_, claims := parseJWTToken(token[7:])
+		userId = claims.Sub
+		admin = claims.IsAdmin()
+		if userId == "" {
+			userId = "dummy"
+			admin = false
 		}
 	}
 	return
+}
+
+func getUserInfo(req *http.Request) (userId string, admin bool) {
+	return getUserInfoFromToken(getToken(req))
 }
 
 func parseJWTToken(encodedToken string) (token *jwt.Token, claims lib.Claims) {

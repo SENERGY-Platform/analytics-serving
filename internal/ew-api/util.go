@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
+	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"strings"
@@ -81,7 +82,7 @@ func checkTopic(partitions *[]kafka.Partition, topic string) bool {
 
 func publishInstances(serving *lib.Serving, missingIds *[]string) (err error) {
 	for _, id := range *missingIds {
-		instances, _, errs := serving.GetInstances("", map[string][]string{"export_database_id": {id}}, true)
+		instances, _, errs := serving.GetInstances("", map[string][]string{"export_database_id": {id}}, true, permV2Client.InternalAdminToken)
 		if len(errs) > 0 {
 			log.Println(errs)
 			err = errors.New("getting instances failed")

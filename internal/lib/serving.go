@@ -19,11 +19,15 @@ package lib
 import (
 	"errors"
 	"fmt"
+	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
+	permV2Model "github.com/SENERGY-Platform/permissions-v2/pkg/model"
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
 	"github.com/jinzhu/gorm"
+	"github.com/robfig/cron/v3"
 	"log"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,12 +38,45 @@ type Serving struct {
 	pipelineService        PipelineApiService
 	importDeployService    ImportDeployService
 	exportDatabaseIdPrefix string
+	permissionsV2          permV2Client.Client
+	permMux                sync.RWMutex
 }
 
-func NewServing(driver Driver, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string) *Serving {
+func NewServing(driver Driver, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string, permissionsV2 permV2Client.Client, cleanupChron string, cleanupRecheckWait time.Duration) (*Serving, error) {
 	influx := NewInflux()
-	return &Serving{driver, influx, permissionService, pipelineService, importDeployService, exportDatabaseIdPrefix}
+	if permissionsV2 != nil {
+		_, err, _ := permissionsV2.SetTopic(permV2Client.InternalAdminToken, permV2Model.Topic{
+			Id:     ExportInstancePermissionsTopic,
+			NoCqrs: true,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	result := &Serving{
+		driver:                 driver,
+		influx:                 influx,
+		permissionService:      permissionService,
+		pipelineService:        pipelineService,
+		importDeployService:    importDeployService,
+		exportDatabaseIdPrefix: exportDatabaseIdPrefix,
+		permissionsV2:          permissionsV2,
+	}
+	if cleanupChron != "" && cleanupChron != "-" {
+		_, err := cron.New().AddFunc(cleanupChron, func() {
+			err := result.ExportInstanceCleanup(cleanupRecheckWait)
+			if err != nil {
+				log.Println("WARNING: cleanup fail", err)
+			}
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
 }
+
+const ExportInstancePermissionsTopic = "export-instances"
 
 func (f *Serving) CreateInstance(req ServingRequest, userId string, token string) (instance Instance, err error) {
 	access, err := f.userHasSourceAccess(req, token)
@@ -48,7 +85,32 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string, token string
 	}
 	id := uuid.New()
 	appId := uuid.New()
+
+	if f.permissionsV2 != nil {
+		f.permMux.RLock()
+		defer f.permMux.RUnlock()
+		_, err, _ = f.permissionsV2.SetPermission(
+			token,
+			ExportInstancePermissionsTopic,
+			id.String(),
+			permV2Model.ResourcePermissions{
+				UserPermissions:  map[string]permV2Model.PermissionsMap{userId: {Read: true, Write: true, Execute: true, Administrate: true}},
+				GroupPermissions: map[string]permV2Model.PermissionsMap{},
+			},
+			permV2Model.SetPermissionOptions{Wait: true})
+		if err != nil {
+			return instance, err
+		}
+	}
+
 	instance, err = f.createInstanceWithId(id, appId, req, userId)
+	if err != nil {
+		if f.permissionsV2 != nil {
+			temperr, _ := f.permissionsV2.RemoveResource(token, ExportInstancePermissionsTopic, id.String())
+			log.Printf("ERROR: %v --> try to remove now inconsistent permission: %v\n", err, temperr)
+		}
+		return instance, err
+	}
 	return
 }
 
@@ -95,7 +157,18 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 		errors = append(errors, err)
 		return
 	}
-	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
+	query := DB.Where("id = ? AND user_id = ?", id, userId)
+	if f.permissionsV2 != nil {
+		access, err, _ = f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Model.Write)
+		if err != nil {
+			return instance, []error{err}
+		}
+		if !access {
+			return instance, []error{fmt.Errorf("access denied")}
+		}
+		query = DB.Where("id = ?", id)
+	}
+	errors = query.Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
 	if len(errors) > 0 {
 		return
 	}
@@ -110,13 +183,13 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	requestInstance, _, _ := populateInstance(uid, appId, request, userId)
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
-	instance = f.update(id, userId, request, requestInstance, uid, appId)
+	instance = f.update(id, userId, request, requestInstance, uid, appId, token)
 	return
 }
 
-func (f *Serving) update(id string, userId string, request ServingRequest, instance Instance, uid uuid.UUID, appId uuid.UUID) Instance {
+func (f *Serving) update(id string, userId string, request ServingRequest, instance Instance, uid uuid.UUID, appId uuid.UUID, token string) Instance {
 	err := retry(5, 5*time.Second, func() (err error) {
-		_, errs := f.DeleteInstanceForUser(id, userId)
+		_, errs := f.DeleteInstanceForUser(id, userId, token)
 		if len(errs) > 1 {
 			err = errs[0]
 		}
@@ -131,20 +204,40 @@ func (f *Serving) update(id string, userId string, request ServingRequest, insta
 	return instance
 }
 
-func (f *Serving) GetInstance(id string, userId string) (instance Instance, errors []error) {
-	errors = DB.Where("id = ? AND user_id = ?", id, userId).Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
+func (f *Serving) GetInstance(id string, userId string, token string) (instance Instance, errors []error) {
+	query := DB.Where("id = ? AND user_id = ?", id, userId)
+	if f.permissionsV2 != nil {
+		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Model.Read)
+		if err != nil {
+			return instance, []error{err}
+		}
+		if !access {
+			return instance, []error{fmt.Errorf("access denied")}
+		}
+		query = DB.Where("id = ?", id)
+	}
+	errors = query.Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
 	return
 }
 
-func (f *Serving) GetInstancesForUser(userId string, args map[string][]string) (instances Instances, count int64, errors []error) {
-	return f.GetInstances(userId, args, false)
+func (f *Serving) GetInstancesForUser(userId string, args map[string][]string, token string) (instances Instances, count int64, errors []error) {
+	return f.GetInstances(userId, args, false, token)
 }
 
-func (f *Serving) GetInstances(userId string, args map[string][]string, admin bool) (instances Instances, total int64, errors []error) {
-	tx := DB.Select("*").Where("user_id = ?", userId)
-	countTx := DB.Where("user_id = ?", userId)
-	if admin {
-		tx = DB.Select("*")
+func (f *Serving) GetInstances(userId string, args map[string][]string, admin bool, token string) (instances Instances, total int64, errors []error) {
+	tx := DB.Select("*")
+	countTx := DB
+	if !admin {
+		tx = DB.Select("*").Where("user_id = ?", userId)
+		countTx = DB.Where("user_id = ?", userId)
+		if f.permissionsV2 != nil {
+			ids, err, _ := f.permissionsV2.ListAccessibleResourceIds(token, ExportInstancePermissionsTopic, permV2Model.ListOptions{}, permV2Model.Read)
+			if err != nil {
+				return instances, total, []error{err}
+			}
+			tx = DB.Select("*").Where("id IN ?", ids)
+			countTx = DB.Where("id IN ?", ids)
+		}
 	}
 	for arg, value := range args {
 		if arg == "limit" {
@@ -196,9 +289,9 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 	return
 }
 
-func (f *Serving) DeleteInstancesForUser(ids []string, userId string) (deleted []string, errors []error) {
+func (f *Serving) DeleteInstancesForUser(ids []string, userId string, token string) (deleted []string, errors []error) {
 	for _, id := range ids {
-		success, errs := f.DeleteInstance(id, userId, false)
+		success, errs := f.DeleteInstance(id, userId, false, token)
 		if success {
 			deleted = append(deleted, id)
 		} else {
@@ -208,17 +301,32 @@ func (f *Serving) DeleteInstancesForUser(ids []string, userId string) (deleted [
 	return
 }
 
-func (f *Serving) DeleteInstanceForUser(id string, userId string) (deleted bool, errors []error) {
-	return f.DeleteInstance(id, userId, false)
+func (f *Serving) DeleteInstanceForUser(id string, userId string, token string) (deleted bool, errors []error) {
+	return f.DeleteInstance(id, userId, false, token)
 }
 
-func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted bool, errors []error) {
-	deleted = false
-	instance := Instance{}
+func (f *Serving) DeleteInstance(id string, userId string, admin bool, token string) (deleted bool, errors []error) {
+	if f.permissionsV2 != nil {
+		f.permMux.RLock()
+		defer f.permMux.RUnlock()
+	}
 	tx := DB.Where("id = ? AND user_id = ?", id, userId)
 	if admin {
 		tx = DB.Where("id = ?", id)
 	}
+	if f.permissionsV2 != nil && !admin {
+		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Model.Administrate)
+		if err != nil {
+			return deleted, []error{err}
+		}
+		if !access {
+			return deleted, []error{fmt.Errorf("access denied")}
+		}
+		tx = DB.Where("id = ?", id)
+	}
+	deleted = false
+	instance := Instance{}
+
 	errors = tx.Preload("ExportDatabase").First(&instance).GetErrors()
 	if len(errors) > 0 {
 		for _, e := range errors {
@@ -248,6 +356,18 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool) (deleted 
 			}
 		}
 	}
+	if len(errors) > 0 {
+		return deleted, errors
+	}
+	if f.permissionsV2 != nil {
+		err = retry(5, 5*time.Second, func() (err error) {
+			err, _ = f.permissionsV2.RemoveResource(token, ExportInstancePermissionsTopic, id)
+			return
+		})
+		if err != nil {
+			return deleted, []error{err}
+		}
+	}
 	return
 }
 
@@ -264,137 +384,6 @@ func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
 	var dataFields, tagFields string
 	_, dataFields, tagFields = transformServingValues(instance.ID, servingRequestValues)
 	instance.RancherServiceId, err = f.driver.CreateInstance(instance, dataFields, tagFields)
-	return
-}
-
-func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (databases []ExportDatabase, errs []error) {
-	tx := DB.Select("*").Where("public = TRUE OR user_id = ?", userId)
-	for arg, value := range args {
-		if arg == "limit" {
-			tx = tx.Limit(value[0])
-		}
-		if arg == "offset" {
-			tx = tx.Offset(value[0])
-		}
-		if arg == "order" {
-			order := strings.SplitN(value[0], ":", 2)
-			tx = tx.Order(order[0] + " " + order[1])
-		}
-		if arg == "search" {
-			search := strings.SplitN(value[0], ":", 2)
-			if len(search) > 1 {
-				allowed := []string{"name", "description", "type"}
-				if StringInSlice(search[0], allowed) {
-					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
-				}
-			} else {
-				tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
-			}
-		}
-		if arg == "deployment" {
-			tx = tx.Where("`deployment` = ?", value[0])
-		}
-		if arg == "public" {
-			if value[0] == "true" {
-				tx = tx.Where("`public` = TRUE")
-			} else {
-				tx = tx.Where("`public` = FALSE")
-			}
-		}
-		if arg == "owner" {
-			if value[0] == "true" {
-				tx = tx.Where("`user_id` = ?", userId)
-			} else {
-				tx = tx.Where("`user_id` != ?", userId)
-			}
-		}
-	}
-	errs = tx.Find(&databases).GetErrors()
-	if len(errs) > 0 {
-		for _, err := range errs {
-			if gorm.IsRecordNotFoundError(err) {
-				return databases, nil
-			}
-		}
-		log.Println("listing export-databases failed - " + fmt.Sprint(errs))
-		return
-	}
-	return
-}
-
-func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDatabase, errs []error) {
-	errs = DB.Where("id = ? AND (user_id = ? OR public = TRUE)", id, userId).First(&database).GetErrors()
-	if len(errs) > 0 {
-		log.Println("retrieving export-database failed - " + id + " - " + fmt.Sprint(errs))
-		return
-	}
-	return
-}
-
-func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
-	if id == "" {
-		id = uuid.New().String()
-		if f.exportDatabaseIdPrefix != "" {
-			id = f.exportDatabaseIdPrefix + id
-		}
-	}
-	database = populateExportDatabase(id, req, userId)
-	if driver, ok := f.driver.(ExportWorkerKafkaApi); ok {
-		err := driver.CreateFilterTopic(database.EwFilterTopic, true)
-		if err != nil {
-			errs = append(errs, err)
-			return
-		}
-	}
-	DB.NewRecord(database)
-	errs = DB.Create(&database).GetErrors()
-	if len(errs) > 0 {
-		log.Println("creating export-database failed - " + fmt.Sprint(errs))
-		return
-	}
-	log.Println("successfully created export-database - " + database.ID)
-	return
-}
-
-func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
-	errs = DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
-	if len(errs) > 0 {
-		for _, err := range errs {
-			if gorm.IsRecordNotFoundError(err) {
-				database, errs = f.CreateExportDatabase(id, req, userId)
-				return
-			}
-		}
-		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
-		return
-	}
-	dbType := database.Type
-	dbEwFilterTopic := database.EwFilterTopic
-	database = populateExportDatabase(id, req, userId)
-	if database.Type != dbType || database.EwFilterTopic != dbEwFilterTopic {
-		errs = append(errs, errors.New("changing 'Type' or 'EwFilterTopic' not allowed"))
-	} else {
-		errs = DB.Save(&database).GetErrors()
-	}
-	if len(errs) > 0 {
-		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
-		return
-	}
-	log.Println("successfully updated export-database - " + database.ID)
-	return
-}
-
-func (f *Serving) DeleteExportDatabase(id string, userId string) (errs []error) {
-	var database ExportDatabase
-	errs = DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
-	if len(errs) > 0 {
-		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
-		return
-	}
-	errs = DB.Delete(&database).GetErrors()
-	if len(errs) > 0 {
-		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
-	}
 	return
 }
 
@@ -466,21 +455,6 @@ func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId 
 
 	instance.Values, dataFields, tagFields = transformServingValues(id, req.Values)
 
-	return
-}
-
-func populateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase) {
-	database = ExportDatabase{
-		ID:            id,
-		Name:          req.Name,
-		Description:   req.Description,
-		Type:          req.Type,
-		Deployment:    req.Deployment,
-		Url:           req.Url,
-		EwFilterTopic: req.EwFilterTopic,
-		Public:        req.Public,
-		UserId:        userId,
-	}
 	return
 }
 

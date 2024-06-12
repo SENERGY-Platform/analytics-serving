@@ -24,6 +24,7 @@ import (
 	pipeline_api "github.com/SENERGY-Platform/analytics-serving/internal/pipeline-api"
 	rancher_api "github.com/SENERGY-Platform/analytics-serving/internal/rancher-api"
 	rancher2_api "github.com/SENERGY-Platform/analytics-serving/internal/rancher2-api"
+	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/segmentio/kafka-go"
@@ -31,6 +32,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func CreateServer() {
@@ -99,7 +101,24 @@ func CreateServer() {
 	permission := permission_api.NewPermissionApi(lib.GetEnv("PERMISSION_API_ENDPOINT", ""))
 	pipeline := pipeline_api.NewPipelineApi(lib.GetEnv("PIPELINE_API_ENDPOINT", ""))
 	imp := import_deploy_api.NewImportDeployApi(lib.GetEnv("IMPORT_DEPLOY_API_ENDPOINT", ""))
-	serving := lib.NewServing(driver, permission, pipeline, imp, lib.GetEnv("EXPORT_DATABASE_ID_PREFIX", ""))
+	var permV2 permV2Client.Client
+	if permV2Url := lib.GetEnv("PERMISSION_V2_URL", ""); permV2Url != "" {
+		permV2 = permV2Client.New(permV2Url)
+	}
+
+	cleanupWait, err := time.ParseDuration(lib.GetEnv("CLEANUP_WAIT_DURATION", "10s"))
+	serving, err := lib.NewServing(driver,
+		permission,
+		pipeline,
+		imp,
+		lib.GetEnv("EXPORT_DATABASE_ID_PREFIX", ""),
+		permV2,
+		lib.GetEnv("CLEANUP_CRON", "0 1 * * *"),
+		cleanupWait)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 	if drvr, ok := driver.(lib.ExportWorkerKafkaApi); ok {
 		err = drvr.InitFilterTopics(serving)
 		if err != nil {
