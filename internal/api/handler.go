@@ -17,6 +17,7 @@
 package api
 
 import (
+	"errors"
 	ew_api "github.com/SENERGY-Platform/analytics-serving/internal/ew-api"
 	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/internal/import-deploy-api"
 	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
@@ -31,11 +32,12 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"time"
 )
 
-func CreateServer() {
+func StartServer() {
 	var err error
 	var driver lib.Driver
 	selectedDriver := lib.GetEnv("DRIVER", "rancher")
@@ -105,9 +107,28 @@ func CreateServer() {
 	if permV2Url := lib.GetEnv("PERMISSION_V2_URL", ""); permV2Url != "" {
 		permV2 = permV2Client.New(permV2Url)
 	}
+	influx := lib.NewInflux()
+	server, _, err := CreateServerFromDependencies(driver, influx, permission, permV2, pipeline, imp)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	log.Println("Starting Server at " + server.Addr)
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		debug.PrintStack()
+		log.Fatal("FATAL:", err)
+	}
+}
 
+func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permission lib.PermissionApiService, permV2 permV2Client.Client, pipeline lib.PipelineApiService, imp lib.ImportDeployService) (*http.Server, *lib.Serving, error) {
+	var err error
 	cleanupWait, err := time.ParseDuration(lib.GetEnv("CLEANUP_WAIT_DURATION", "10s"))
-	serving, err := lib.NewServing(driver,
+	if err != nil {
+		return nil, nil, err
+	}
+	var serving *lib.Serving
+	serving, err = lib.NewServing(driver,
+		influx,
 		permission,
 		pipeline,
 		imp,
@@ -116,18 +137,14 @@ func CreateServer() {
 		lib.GetEnv("CLEANUP_CRON", "0 1 * * *"),
 		cleanupWait)
 	if err != nil {
-		log.Fatal(err)
-		return
+		return nil, nil, err
 	}
 	if drvr, ok := driver.(lib.ExportWorkerKafkaApi); ok {
 		err = drvr.InitFilterTopics(serving)
 		if err != nil {
-			log.Fatal(err)
-			return
+			return nil, nil, err
 		}
 	}
-	port := lib.GetEnv("API_PORT", "8000")
-	log.Print("Starting Server at port " + port + "\n")
 	router := mux.NewRouter()
 	e := NewEndpoint(serving)
 	router.HandleFunc("/", e.getRootEndpoint).Methods("GET")
@@ -154,8 +171,8 @@ func CreateServer() {
 	logger := lib.NewLogger(handler, lib.GetEnv("LOG_LEVEL", "CALL"))
 	defer logger.CloseLogFile()
 	if err != nil {
-		log.Fatal(err)
-		return
+		return nil, nil, err
 	}
-	log.Fatal(http.ListenAndServe(lib.GetEnv("SERVERNAME", "")+":"+port, logger))
+	port := lib.GetEnv("API_PORT", "8000")
+	return &http.Server{Addr: lib.GetEnv("SERVERNAME", "") + ":" + port, Handler: logger}, serving, nil
 }

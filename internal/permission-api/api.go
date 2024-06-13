@@ -17,43 +17,42 @@
 package permission_api
 
 import (
-	"encoding/json"
 	"errors"
-	"github.com/parnurzeal/gorequest"
+	"fmt"
+	"github.com/SENERGY-Platform/permission-search/lib/client"
 	"net/http"
 	"strconv"
 )
 
 type PermissionApi struct {
-	url string
+	client client.Client
 }
 
 func NewPermissionApi(url string) *PermissionApi {
-	return &PermissionApi{url}
+	return NewPermissionApiFromClient(client.NewClient(url))
+}
+
+func NewPermissionApiFromClient(client client.Client) *PermissionApi {
+	return &PermissionApi{client: client}
 }
 
 func (a PermissionApi) UserHasDevicesReadAccess(ids []string, authorization string) (result bool, err error) {
-	result = false
-	var response map[string]bool
-	request := gorequest.New()
-
-	request.Post(a.url+"/query").Set("Authorization", authorization).Send(Check{
+	response, code, err := client.Query[map[string]bool](a.client, authorization, client.QueryMessage{
 		Resource: "devices",
-		CheckIds: CheckIdsObject{
+		CheckIds: &client.QueryCheckIds{
 			Ids:    ids,
 			Rights: "r",
 		},
 	})
-	resp, body, e := request.End()
-	if resp.StatusCode != http.StatusOK {
-		err = errors.New("permission API - could not check access rights: " + strconv.Itoa(resp.StatusCode) + " " + body)
+
+	result = false
+	if err != nil {
+		return result, fmt.Errorf("permission API - could not check access rights: %w", err)
+	}
+	if code != http.StatusOK {
+		err = errors.New("permission API - could not check access rights: " + strconv.Itoa(code))
 		return
 	}
-	if len(e) > 0 {
-		err = errors.New("permission API - could not check access rights: an error occurred")
-		return
-	}
-	err = json.Unmarshal([]byte(body), &response)
 	if len(response) > 0 {
 		for _, access := range response {
 			if !access {

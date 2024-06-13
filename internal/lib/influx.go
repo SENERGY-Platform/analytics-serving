@@ -24,11 +24,15 @@ import (
 	influxClient "github.com/influxdata/influxdb1-client/v2"
 )
 
-type Influx struct {
+type Influx interface {
+	ForceDeleteMeasurement(id string, userId string, instance Instance) (errs []error)
+}
+
+type InfluxImpl struct {
 	client influxClient.Client
 }
 
-func NewInflux() *Influx {
+func NewInflux() *InfluxImpl {
 	client, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
 		Addr:     GetEnv("INFLUX_DB_PROTO", "http") + "://" + GetEnv("INFLUX_DB_HOST", "") + ":" + GetEnv("INFLUX_DB_PORT", "8086"),
 		Username: GetEnv("INFLUX_DB_USERNAME", "root"),
@@ -42,10 +46,33 @@ func NewInflux() *Influx {
 			log.Println(err)
 		}
 	}()
-	return &Influx{client}
+	return &InfluxImpl{client}
 }
 
-func (i *Influx) DropMeasurement(instance Instance) (errors []error) {
+func (i *InfluxImpl) ForceDeleteMeasurement(id string, userId string, instance Instance) (errs []error) {
+	defer func() {
+		if err := recover(); err != nil {
+			errs = append(errs, errors.New("force delete influx measurement failed - panic occurred: "+fmt.Sprint(err)))
+		}
+	}()
+	for {
+		errs = i.dropMeasurement(instance)
+		if len(errs) > 0 {
+			return
+		}
+		measurements, err := i.getMeasurements(userId)
+		if err != nil {
+			errs = append(errs, err)
+			return
+		}
+		if !StringInSlice(id, measurements) {
+			break
+		}
+	}
+	return
+}
+
+func (i *InfluxImpl) dropMeasurement(instance Instance) (errors []error) {
 	q := influxClient.NewQuery("DROP MEASUREMENT "+"\""+instance.Measurement+"\"", instance.Database, "")
 	response, err := i.client.Query(q)
 	if err != nil {
@@ -57,7 +84,7 @@ func (i *Influx) DropMeasurement(instance Instance) (errors []error) {
 	return
 }
 
-func (i *Influx) GetMeasurements(userId string) (measurements []string, err error) {
+func (i *InfluxImpl) getMeasurements(userId string) (measurements []string, err error) {
 	q := influxClient.NewQuery("SHOW MEASUREMENTS", userId, "")
 	response, err := i.client.Query(q)
 	if err != nil {
@@ -74,27 +101,4 @@ func (i *Influx) GetMeasurements(userId string) (measurements []string, err erro
 		}
 	}
 	return measurements, err
-}
-
-func (i *Influx) forceDeleteMeasurement(id string, userId string, instance Instance) (errs []error) {
-	defer func() {
-		if err := recover(); err != nil {
-			errs = append(errs, errors.New("force delete influx measurement failed - panic occurred: "+fmt.Sprint(err)))
-		}
-	}()
-	for {
-		errs = i.DropMeasurement(instance)
-		if len(errs) > 0 {
-			return
-		}
-		measurements, err := i.GetMeasurements(userId)
-		if err != nil {
-			errs = append(errs, err)
-			return
-		}
-		if !StringInSlice(id, measurements) {
-			break
-		}
-	}
-	return
 }

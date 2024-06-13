@@ -19,7 +19,7 @@ package lib
 import (
 	"errors"
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
-	permV2Model "github.com/SENERGY-Platform/permissions-v2/pkg/model"
+	"github.com/jinzhu/gorm"
 	"log"
 	"slices"
 	"time"
@@ -38,7 +38,7 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 		allIds = append(allIds, missingInDb...)
 
 		if len(missingInPerm) > 0 || len(missingInDb) > 0 {
-			log.Printf("wait %v before rechecking and deleting of %v ids", recheckWait.String(), allIds)
+			log.Printf("wait %v before rechecking and deleting of %v ids", recheckWait.String(), len(allIds))
 			time.Sleep(recheckWait)
 		}
 
@@ -48,6 +48,7 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 		}
 
 		for _, id := range missingInDb {
+			log.Println("rechecking", id)
 			consistent, err := f.checkPermConsistency(permIdsMap, id)
 			if err != nil {
 				return err
@@ -61,13 +62,14 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 			}
 		}
 		for _, id := range missingInPerm {
-			consistent, err := f.checkPermConsistency(nil, id)
+			log.Println("rechecking", id)
+			consistent, err := f.checkPermConsistency(permIdsMap, id)
 			if err != nil {
 				return err
 			}
 			if !consistent {
 				log.Printf("inconsistent export instance found, remove %v from local db\n", id)
-				_, errs := f.DeleteInstance(id, "", true, permV2Client.InternalAdminToken)
+				_, errs := f.DeleteInstanceWithPermHandling(id, "", true, permV2Client.InternalAdminToken)
 				err = errors.Join(errs...)
 				if err != nil {
 					return err
@@ -81,7 +83,7 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, missingInDb []string, err error) {
 	if f.permissionsV2 != nil {
 		done := false
-		option := permV2Model.ListOptions{Limit: 100}
+		option := permV2Client.ListOptions{Limit: 100}
 		knownPermIds := map[string]bool{}
 
 		//loop permission ids
@@ -101,23 +103,29 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 				}
 
 				//check if permission ids are in local db
-				rows, err := DB.Model(&Instance{}).Select("id").Where("id IN ?", ids).Rows()
-				if err != nil {
-					return true, err
-				}
-				for rows.Next() {
-					var id string
-					err = rows.Scan(&id)
+				if len(ids) > 0 {
+					rows, err := DB.Model(&Instance{}).Select("id").Where("id IN (?)", ids).Rows()
 					if err != nil {
 						return true, err
 					}
-					if !slices.Contains(ids, id) {
-						missingInDb = append(missingInDb, id)
+					dbIds := []string{}
+					for rows.Next() {
+						var id string
+						err = rows.Scan(&id)
+						if err != nil {
+							return true, err
+						}
+						dbIds = append(dbIds, id)
 					}
-				}
-				err = rows.Err()
-				if err != nil {
-					return true, err
+					err = rows.Err()
+					if err != nil {
+						return true, err
+					}
+					for _, id := range ids {
+						if !slices.Contains(dbIds, id) {
+							missingInDb = append(missingInDb, id)
+						}
+					}
 				}
 				if int64(len(ids)) < option.Limit {
 					return true, nil
@@ -173,11 +181,16 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 }
 
 func (f *Serving) checkPermConsistency(permIdsMap map[string]bool, id string) (consistent bool, err error) {
+	_, existsInPerm := permIdsMap[id]
 	var existsInDb bool
-	err = DB.Model(Instance{}).Select("count(*) > 0").Where("id = ?", id).Find(&existsInDb).Error
+	err = DB.Where("id = ?", id).First(&Instance{}).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		existsInDb = false
+		return existsInPerm == existsInDb, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	_, existsInPerm := permIdsMap[id]
+	existsInDb = true
 	return existsInPerm == existsInDb, nil
 }

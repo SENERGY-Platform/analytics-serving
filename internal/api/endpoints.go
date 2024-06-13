@@ -212,7 +212,7 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 	vars := mux.Vars(req)
 	token := getToken(req)
 	userId, admin := getUserInfoFromToken(token)
-	deleted, errors := e.serving.DeleteInstance(vars["id"], userId, admin, token)
+	deleted, errors := e.serving.DeleteInstanceWithPermHandling(vars["id"], userId, admin, token)
 	w.Header().Set("Content-Type", "application/json")
 	if len(errors) == 0 && deleted == true {
 		w.WriteHeader(http.StatusNoContent)

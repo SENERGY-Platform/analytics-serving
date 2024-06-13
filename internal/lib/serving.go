@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
-	permV2Model "github.com/SENERGY-Platform/permissions-v2/pkg/model"
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
 	"github.com/jinzhu/gorm"
@@ -33,7 +32,7 @@ import (
 
 type Serving struct {
 	driver                 Driver
-	influx                 *Influx
+	influx                 Influx
 	permissionService      PermissionApiService
 	pipelineService        PipelineApiService
 	importDeployService    ImportDeployService
@@ -42,10 +41,12 @@ type Serving struct {
 	permMux                sync.RWMutex
 }
 
-func NewServing(driver Driver, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string, permissionsV2 permV2Client.Client, cleanupChron string, cleanupRecheckWait time.Duration) (*Serving, error) {
-	influx := NewInflux()
+func NewServing(driver Driver, influx Influx, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string, permissionsV2 permV2Client.Client, cleanupChron string, cleanupRecheckWait time.Duration) (*Serving, error) {
+	if influx == nil {
+		influx = NewInflux()
+	}
 	if permissionsV2 != nil {
-		_, err, _ := permissionsV2.SetTopic(permV2Client.InternalAdminToken, permV2Model.Topic{
+		_, err, _ := permissionsV2.SetTopic(permV2Client.InternalAdminToken, permV2Client.Topic{
 			Id:     ExportInstancePermissionsTopic,
 			NoCqrs: true,
 		})
@@ -93,11 +94,11 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string, token string
 			token,
 			ExportInstancePermissionsTopic,
 			id.String(),
-			permV2Model.ResourcePermissions{
-				UserPermissions:  map[string]permV2Model.PermissionsMap{userId: {Read: true, Write: true, Execute: true, Administrate: true}},
-				GroupPermissions: map[string]permV2Model.PermissionsMap{},
+			permV2Client.ResourcePermissions{
+				UserPermissions:  map[string]permV2Client.PermissionsMap{userId: {Read: true, Write: true, Execute: true, Administrate: true}},
+				GroupPermissions: map[string]permV2Client.PermissionsMap{},
 			},
-			permV2Model.SetPermissionOptions{Wait: true})
+			permV2Client.SetPermissionOptions{Wait: true})
 		if err != nil {
 			return instance, err
 		}
@@ -159,7 +160,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	}
 	query := DB.Where("id = ? AND user_id = ?", id, userId)
 	if f.permissionsV2 != nil {
-		access, err, _ = f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Model.Write)
+		access, err, _ = f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Client.Write)
 		if err != nil {
 			return instance, []error{err}
 		}
@@ -183,13 +184,15 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	requestInstance, _, _ := populateInstance(uid, appId, request, userId)
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
-	instance = f.update(id, userId, request, requestInstance, uid, appId, token)
+	instance = f.update(id, userId, request, requestInstance, uid, appId)
 	return
 }
 
-func (f *Serving) update(id string, userId string, request ServingRequest, instance Instance, uid uuid.UUID, appId uuid.UUID, token string) Instance {
+func (f *Serving) update(id string, userId string, request ServingRequest, instance Instance, uid uuid.UUID, appId uuid.UUID) Instance {
 	err := retry(5, 5*time.Second, func() (err error) {
-		_, errs := f.DeleteInstanceForUser(id, userId, token)
+		//we use an empty userId to indicate that the user should not be checked
+		//the check has already been done by UpdateInstance()
+		_, errs := f.deleteInstance(id, "")
 		if len(errs) > 1 {
 			err = errs[0]
 		}
@@ -207,7 +210,7 @@ func (f *Serving) update(id string, userId string, request ServingRequest, insta
 func (f *Serving) GetInstance(id string, userId string, token string) (instance Instance, errors []error) {
 	query := DB.Where("id = ? AND user_id = ?", id, userId)
 	if f.permissionsV2 != nil {
-		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Model.Read)
+		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Client.Read)
 		if err != nil {
 			return instance, []error{err}
 		}
@@ -231,12 +234,15 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 		tx = DB.Select("*").Where("user_id = ?", userId)
 		countTx = DB.Where("user_id = ?", userId)
 		if f.permissionsV2 != nil {
-			ids, err, _ := f.permissionsV2.ListAccessibleResourceIds(token, ExportInstancePermissionsTopic, permV2Model.ListOptions{}, permV2Model.Read)
+			ids, err, _ := f.permissionsV2.ListAccessibleResourceIds(token, ExportInstancePermissionsTopic, permV2Client.ListOptions{}, permV2Client.Read)
 			if err != nil {
 				return instances, total, []error{err}
 			}
-			tx = DB.Select("*").Where("id IN ?", ids)
-			countTx = DB.Where("id IN ?", ids)
+			if len(ids) == 0 {
+				return Instances{}, 0, nil
+			}
+			tx = DB.Select("*").Where("id IN (?)", ids)
+			countTx = DB.Where("id IN (?)", ids)
 		}
 	}
 	for arg, value := range args {
@@ -291,7 +297,7 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 
 func (f *Serving) DeleteInstancesForUser(ids []string, userId string, token string) (deleted []string, errors []error) {
 	for _, id := range ids {
-		success, errs := f.DeleteInstance(id, userId, false, token)
+		success, errs := f.DeleteInstanceWithPermHandling(id, userId, false, token)
 		if success {
 			deleted = append(deleted, id)
 		} else {
@@ -302,27 +308,44 @@ func (f *Serving) DeleteInstancesForUser(ids []string, userId string, token stri
 }
 
 func (f *Serving) DeleteInstanceForUser(id string, userId string, token string) (deleted bool, errors []error) {
-	return f.DeleteInstance(id, userId, false, token)
+	return f.DeleteInstanceWithPermHandling(id, userId, false, token)
 }
 
-func (f *Serving) DeleteInstance(id string, userId string, admin bool, token string) (deleted bool, errors []error) {
+func (f *Serving) DeleteInstanceWithPermHandling(id string, userId string, admin bool, token string) (deleted bool, errors []error) {
 	if f.permissionsV2 != nil {
 		f.permMux.RLock()
 		defer f.permMux.RUnlock()
 	}
-	tx := DB.Where("id = ? AND user_id = ?", id, userId)
-	if admin {
-		tx = DB.Where("id = ?", id)
-	}
 	if f.permissionsV2 != nil && !admin {
-		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Model.Administrate)
+		userId = ""
+		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Client.Administrate)
 		if err != nil {
 			return deleted, []error{err}
 		}
 		if !access {
 			return deleted, []error{fmt.Errorf("access denied")}
 		}
-		tx = DB.Where("id = ?", id)
+	}
+	deleted, errors = f.deleteInstance(id, userId)
+	if len(errors) > 0 {
+		return deleted, errors
+	}
+	if f.permissionsV2 != nil && deleted {
+		err := retry(5, 5*time.Second, func() (err error) {
+			err, _ = f.permissionsV2.RemoveResource(token, ExportInstancePermissionsTopic, id)
+			return
+		})
+		if err != nil {
+			return deleted, []error{err}
+		}
+	}
+	return
+}
+
+func (f *Serving) deleteInstance(id string, userId string) (deleted bool, errors []error) {
+	tx := DB.Where("id = ?", id)
+	if userId != "" {
+		tx = DB.Where("id = ? AND user_id = ?", id, userId)
 	}
 	deleted = false
 	instance := Instance{}
@@ -348,7 +371,7 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool, token str
 		deleted = true
 		errors = DB.Delete(&instance).GetErrors()
 		if instance.ExportDatabase.Type == "influxdb" {
-			errs := f.influx.forceDeleteMeasurement(id, userId, instance)
+			errs := f.influx.ForceDeleteMeasurement(id, userId, instance)
 			if len(errs) > 0 {
 				for _, e := range errs {
 					errors = append(errors, e)
@@ -356,19 +379,7 @@ func (f *Serving) DeleteInstance(id string, userId string, admin bool, token str
 			}
 		}
 	}
-	if len(errors) > 0 {
-		return deleted, errors
-	}
-	if f.permissionsV2 != nil {
-		err = retry(5, 5*time.Second, func() (err error) {
-			err, _ = f.permissionsV2.RemoveResource(token, ExportInstancePermissionsTopic, id)
-			return
-		})
-		if err != nil {
-			return deleted, []error{err}
-		}
-	}
-	return
+	return deleted, errors
 }
 
 func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
