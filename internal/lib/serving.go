@@ -316,6 +316,9 @@ func (f *Serving) DeleteInstanceWithPermHandling(id string, userId string, admin
 		f.permMux.RLock()
 		defer f.permMux.RUnlock()
 	}
+	if admin {
+		userId = ""
+	}
 	if f.permissionsV2 != nil && !admin {
 		userId = ""
 		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Client.Administrate)

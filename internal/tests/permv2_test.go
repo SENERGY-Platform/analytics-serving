@@ -391,6 +391,74 @@ func TestPermissionsV2Handling(t *testing.T) {
 		}
 	})
 
+	t.Run("admin delete instance", func(t *testing.T) {
+		var exportInstance lib.Instance
+		temp, err := json.Marshal(lib.ServingRequest{
+			FilterType:       "deviceId",
+			Name:             "instanceDelete2",
+			Filter:           "device1",
+			EntityName:       "device1",
+			ServiceName:      "service1",
+			Description:      "foo",
+			Topic:            "?",
+			TimePath:         "?",
+			TimePrecision:    "?",
+			Generated:        false,
+			Offset:           "?",
+			ForceUpdate:      false,
+			Values:           nil,
+			ExportDatabaseID: exportDatabasePublic.ID,
+			TimestampFormat:  "?",
+		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		req, err := http.NewRequest(http.MethodPost, "http://localhost:"+serverPort+"/instance", bytes.NewReader(temp))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		exportInstance, err, _ = doReq[lib.Instance](SecondOwnerToken, req)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		sort.Strings(ids)
+		expected := []string{exportInstance2.ID.String(), exportInstance.ID.String()}
+		sort.Strings(expected)
+		if !reflect.DeepEqual(ids, expected) {
+			t.Error(ids)
+			return
+		}
+
+		req, err = http.NewRequest(http.MethodDelete, "http://localhost:"+serverPort+"/admin/instance/"+url.PathEscape(exportInstance.ID.String()), nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err, _ = doVoid(client.InternalAdminToken, req)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		ids, err, _ = permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !reflect.DeepEqual(ids, []string{exportInstance2.ID.String()}) {
+			t.Error(ids)
+			return
+		}
+	})
+
 	t.Run("allow testUser access to exportInstance2", func(t *testing.T) {
 		_, err, _ = permV2.SetPermission(SecondOwnerToken,
 			lib.ExportInstancePermissionsTopic,
@@ -491,6 +559,30 @@ func TestPermissionsV2Handling(t *testing.T) {
 				return
 			}
 		})
+	})
+
+	t.Run("admin list", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "http://localhost:"+serverPort+"/admin/instance", nil)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		instances, err, _ := doReq[[]lib.Instance](client.InternalAdminToken, req)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		ids := []string{}
+		for _, instance := range instances {
+			ids = append(ids, instance.ID.String())
+		}
+		sort.Strings(ids)
+		expected := []string{exportInstance1.ID.String(), exportInstance2.ID.String()}
+		sort.Strings(expected)
+		if !reflect.DeepEqual(ids, expected) {
+			t.Error(ids)
+			return
+		}
 	})
 
 	t.Run("list", func(t *testing.T) {
@@ -786,6 +878,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 		}
 
 	})
+
 }
 
 func doReq[T any](token string, req *http.Request) (result T, err error, code int) {
