@@ -68,11 +68,32 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 				return err
 			}
 			if !consistent {
-				log.Printf("inconsistent export instance found, remove %v from local db\n", id)
-				_, errs := f.DeleteInstanceWithPermHandling(id, "", true, permV2Client.InternalAdminToken)
-				err = errors.Join(errs...)
+				instance, err := f.getInstanceById(id)
 				if err != nil {
 					return err
+				}
+				if instance.UserId != "" {
+					log.Printf("inconsistent export instance found, add %v with user=%v to permissions\n", id, instance.UserId)
+					_, err, _ = f.permissionsV2.SetPermission(
+						permV2Client.InternalAdminToken,
+						ExportInstancePermissionsTopic,
+						id,
+						permV2Client.ResourcePermissions{
+							UserPermissions:  map[string]permV2Client.PermissionsMap{instance.UserId: {Read: true, Write: true, Execute: true, Administrate: true}},
+							GroupPermissions: map[string]permV2Client.PermissionsMap{},
+						},
+						permV2Client.SetPermissionOptions{Wait: false},
+					)
+					if err != nil {
+						return err
+					}
+				} else {
+					log.Printf("WARNING: inconsistent export instance without user found, remove %v from local db\n", id)
+					_, errs := f.DeleteInstanceWithPermHandling(id, "", true, permV2Client.InternalAdminToken)
+					err = errors.Join(errs...)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}

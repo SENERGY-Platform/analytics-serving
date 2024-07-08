@@ -223,6 +223,12 @@ func (f *Serving) GetInstance(id string, userId string, token string) (instance 
 	return
 }
 
+func (f *Serving) getInstanceById(id string) (instance Instance, err error) {
+	query := DB.Where("id = ?", id)
+	err = errors.Join(query.Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()...)
+	return
+}
+
 func (f *Serving) GetInstancesForUser(userId string, args map[string][]string, token string) (instances Instances, count int64, errors []error) {
 	return f.GetInstances(userId, args, false, token)
 }

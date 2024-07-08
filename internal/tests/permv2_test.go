@@ -687,8 +687,9 @@ func TestPermissionsV2Handling(t *testing.T) {
 
 	})
 
+	var exportInstance lib.Instance
+
 	t.Run("cleanup", func(t *testing.T) {
-		var exportInstance lib.Instance
 		temp, err := json.Marshal(lib.ServingRequest{
 			FilterType:       "deviceId",
 			Name:             "instanceDelete",
@@ -751,7 +752,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			return
 		}
 		sort.Strings(ids)
-		expected := []string{exportInstance2.ID.String(), exportInstance1.ID.String()}
+		expected := []string{exportInstance2.ID.String(), exportInstance1.ID.String(), exportInstance.ID.String()}
 		sort.Strings(expected)
 		if !reflect.DeepEqual(ids, expected) {
 			t.Log("expected:", expected)
@@ -768,7 +769,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 		for _, instance := range instances {
 			actualIds = append(actualIds, instance.ID.String())
 		}
-		expectedIds := []string{exportInstance1.ID.String(), exportInstance2.ID.String()}
+		expectedIds := []string{exportInstance1.ID.String(), exportInstance2.ID.String(), exportInstance.ID.String()}
 		sort.Strings(actualIds)
 		sort.Strings(expectedIds)
 		if !reflect.DeepEqual(actualIds, expectedIds) {
@@ -792,7 +793,10 @@ func TestPermissionsV2Handling(t *testing.T) {
 		for _, instance := range instances.Instances {
 			ids = append(ids, instance.ID.String())
 		}
-		if !reflect.DeepEqual(ids, []string{exportInstance2.ID.String()}) {
+		expected := []string{exportInstance2.ID.String(), exportInstance.ID.String()}
+		sort.Strings(expected)
+		sort.Strings(ids)
+		if !reflect.DeepEqual(ids, expected) {
 			t.Error(ids)
 			return
 		}
@@ -812,7 +816,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			ids = append(ids, instance.ID.String())
 		}
 		sort.Strings(ids)
-		expected := []string{exportInstance1.ID.String(), exportInstance2.ID.String()}
+		expected = []string{exportInstance1.ID.String(), exportInstance2.ID.String()}
 		sort.Strings(expected)
 		if !reflect.DeepEqual(ids, expected) {
 			t.Error(ids)
