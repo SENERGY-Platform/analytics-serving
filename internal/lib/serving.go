@@ -63,8 +63,13 @@ func NewServing(driver Driver, influx Influx, permissionService PermissionApiSer
 		exportDatabaseIdPrefix: exportDatabaseIdPrefix,
 		permissionsV2:          permissionsV2,
 	}
+	err := result.ExportInstanceCleanup(cleanupRecheckWait)
+	if err != nil {
+		return nil, err
+	}
 	if cleanupChron != "" && cleanupChron != "-" {
-		_, err := cron.New().AddFunc(cleanupChron, func() {
+		runner := cron.New()
+		_, err = runner.AddFunc(cleanupChron, func() {
 			err := result.ExportInstanceCleanup(cleanupRecheckWait)
 			if err != nil {
 				log.Println("WARNING: cleanup fail", err)
@@ -73,6 +78,7 @@ func NewServing(driver Driver, influx Influx, permissionService PermissionApiSer
 		if err != nil {
 			return nil, err
 		}
+		runner.Start()
 	}
 	return result, nil
 }
