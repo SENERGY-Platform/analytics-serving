@@ -213,9 +213,11 @@ func (f *Serving) update(id string, userId string, request ServingRequest, insta
 	return instance
 }
 
-func (f *Serving) GetInstance(id string, userId string, token string) (instance Instance, errors []error) {
-	query := DB.Where("id = ? AND user_id = ?", id, userId)
-	if f.permissionsV2 != nil {
+func (f *Serving) GetInstance(id string, userId string, token string, admin bool) (instance Instance, errors []error) {
+	var query *gorm.DB
+	if admin {
+		query = DB.Where("id = ?", id)
+	} else if f.permissionsV2 != nil {
 		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Client.Read)
 		if err != nil {
 			return instance, []error{err}
@@ -224,6 +226,8 @@ func (f *Serving) GetInstance(id string, userId string, token string) (instance 
 			return instance, []error{fmt.Errorf("access denied")}
 		}
 		query = DB.Where("id = ?", id)
+	} else {
+		query = DB.Where("id = ? AND user_id = ?", id, userId)
 	}
 	errors = query.Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
 	return

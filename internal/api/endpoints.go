@@ -106,8 +106,8 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
 	token := getToken(req)
-	userId, _ := getUserInfoFromToken(token)
-	instance, errors := e.serving.GetInstance(vars["id"], userId, token)
+	userId, isAdmin := getUserInfoFromToken(token)
+	instance, errors := e.serving.GetInstance(vars["id"], userId, token, isAdmin)
 	if len(errors) > 0 {
 		for _, err := range errors {
 			log.Println(err)
