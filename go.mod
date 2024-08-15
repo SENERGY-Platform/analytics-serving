@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/SENERGY-Platform/permission-search v0.0.19
-	github.com/SENERGY-Platform/permissions-v2 v0.0.16
+	github.com/SENERGY-Platform/permissions-v2 v0.0.17
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
