@@ -460,7 +460,8 @@ func TestPermissionsV2Handling(t *testing.T) {
 	})
 
 	t.Run("allow testUser access to exportInstance2", func(t *testing.T) {
-		_, err, _ = permV2.SetPermission(SecondOwnerToken,
+		_, err, _ = permV2.SetPermission(
+			client.InternalAdminToken,
 			lib.ExportInstancePermissionsTopic,
 			exportInstance2.ID.String(),
 			client.ResourcePermissions{
@@ -468,8 +469,9 @@ func TestPermissionsV2Handling(t *testing.T) {
 					TestTokenUser:        {Read: true, Write: true, Execute: true, Administrate: true},
 					SecendOwnerTokenUser: {Read: true, Write: true, Execute: true, Administrate: true}},
 				GroupPermissions: map[string]model.PermissionsMap{},
+				RolePermissions:  map[string]model.PermissionsMap{},
 			},
-			client.SetPermissionOptions{Wait: true})
+		)
 		if err != nil {
 			t.Error(err)
 			return
@@ -726,7 +728,8 @@ func TestPermissionsV2Handling(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		_, err, _ = permV2.SetPermission(SecondOwnerToken,
+		_, err, _ = permV2.SetPermission(
+			client.InternalAdminToken,
 			lib.ExportInstancePermissionsTopic,
 			"will-be-removed",
 			client.ResourcePermissions{
@@ -735,7 +738,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 				},
 				GroupPermissions: map[string]model.PermissionsMap{},
 			},
-			client.SetPermissionOptions{Wait: true})
+		)
 		if err != nil {
 			t.Error(err)
 			return

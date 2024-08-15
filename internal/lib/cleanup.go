@@ -19,6 +19,7 @@ package lib
 import (
 	"errors"
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
+	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
 	"github.com/jinzhu/gorm"
 	"log"
 	"slices"
@@ -81,8 +82,8 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 						permV2Client.ResourcePermissions{
 							UserPermissions:  map[string]permV2Client.PermissionsMap{instance.UserId: {Read: true, Write: true, Execute: true, Administrate: true}},
 							GroupPermissions: map[string]permV2Client.PermissionsMap{},
+							RolePermissions:  map[string]model.PermissionsMap{},
 						},
-						permV2Client.SetPermissionOptions{Wait: false},
 					)
 					if err != nil {
 						return err

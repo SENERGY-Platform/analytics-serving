@@ -47,8 +47,7 @@ func NewServing(driver Driver, influx Influx, permissionService PermissionApiSer
 	}
 	if permissionsV2 != nil {
 		_, err, _ := permissionsV2.SetTopic(permV2Client.InternalAdminToken, permV2Client.Topic{
-			Id:     ExportInstancePermissionsTopic,
-			NoCqrs: true,
+			Id: ExportInstancePermissionsTopic,
 		})
 		if err != nil {
 			return nil, err
@@ -97,14 +96,14 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string, token string
 		f.permMux.RLock()
 		defer f.permMux.RUnlock()
 		_, err, _ = f.permissionsV2.SetPermission(
-			token,
+			permV2Client.InternalAdminToken,
 			ExportInstancePermissionsTopic,
 			id.String(),
 			permV2Client.ResourcePermissions{
 				UserPermissions:  map[string]permV2Client.PermissionsMap{userId: {Read: true, Write: true, Execute: true, Administrate: true}},
 				GroupPermissions: map[string]permV2Client.PermissionsMap{},
-			},
-			permV2Client.SetPermissionOptions{Wait: true})
+				RolePermissions:  map[string]permV2Client.PermissionsMap{},
+			})
 		if err != nil {
 			return instance, err
 		}
