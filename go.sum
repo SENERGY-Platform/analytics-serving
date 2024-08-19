@@ -17,8 +17,8 @@ github.com/SENERGY-Platform/developer-notifications v0.0.4 h1:SmblhfWavNhE1mDxzr
 github.com/SENERGY-Platform/developer-notifications v0.0.4/go.mod h1:8yJrYnAYMtPEPy89ULw8ivgG8orVhSnaLgyfDt0bdgg=
 github.com/SENERGY-Platform/permission-search v0.0.19 h1:D4k08mhX18enY8CzX6ZMoTvzaRs0ss6d++SnTJz7Zr8=
 github.com/SENERGY-Platform/permission-search v0.0.19/go.mod h1:b2ckm6kM+XuDBZxx+cdv6YbM6SRk2EJi7Ny5ffTWhfc=
-github.com/SENERGY-Platform/permissions-v2 v0.0.18 h1:u4UmSeop/xFPapDNzDbUeZJdc+9VJkeLjM2EVNnWrKA=
-github.com/SENERGY-Platform/permissions-v2 v0.0.18/go.mod h1:C5cajCotaGI1CvgvdlEPZ5Ig/yAiJUCVNJYPqu2SNvg=
+github.com/SENERGY-Platform/permissions-v2 v0.0.19 h1:rKSoayL5iZ2p1nFdfOsQbl17qARlXZq+MocBUlMei6I=
+github.com/SENERGY-Platform/permissions-v2 v0.0.19/go.mod h1:C5cajCotaGI1CvgvdlEPZ5Ig/yAiJUCVNJYPqu2SNvg=
 github.com/SENERGY-Platform/service-commons v0.0.0-20240813072046-91b3195dd8fc h1:FbGDfHiDukp8wD1w4YNxjwiDpSNkRUG+Ymq9jjz3Auc=
 github.com/SENERGY-Platform/service-commons v0.0.0-20240813072046-91b3195dd8fc/go.mod h1:1p2CQPNtler5leXqNgaOfr7DlgZUydrQlQYA97ycm4k=
 github.com/andybalholm/cascadia v1.1.0/go.mod h1:GsXiBklL0woXo1j/WYWtSYYC4ouU9PqHO0sqidkEA4Y=

@@ -112,7 +112,7 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string, token string
 	instance, err = f.createInstanceWithId(id, appId, req, userId)
 	if err != nil {
 		if f.permissionsV2 != nil {
-			temperr, _ := f.permissionsV2.RemoveResource(token, ExportInstancePermissionsTopic, id.String())
+			temperr, _ := f.permissionsV2.RemoveResource(permV2Client.InternalAdminToken, ExportInstancePermissionsTopic, id.String())
 			log.Printf("ERROR: %v --> try to remove now inconsistent permission: %v\n", err, temperr)
 		}
 		return instance, err
@@ -350,7 +350,7 @@ func (f *Serving) DeleteInstanceWithPermHandling(id string, userId string, admin
 	}
 	if f.permissionsV2 != nil && deleted {
 		err := retry(5, 5*time.Second, func() (err error) {
-			err, _ = f.permissionsV2.RemoveResource(token, ExportInstancePermissionsTopic, id)
+			err, _ = f.permissionsV2.RemoveResource(permV2Client.InternalAdminToken, ExportInstancePermissionsTopic, id)
 			return
 		})
 		if err != nil {

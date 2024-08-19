@@ -723,7 +723,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		err, _ = permV2.RemoveResource(SecondOwnerToken, lib.ExportInstancePermissionsTopic, exportInstance.ID.String())
+		err, _ = permV2.RemoveResource(client.InternalAdminToken, lib.ExportInstancePermissionsTopic, exportInstance.ID.String())
 		if err != nil {
 			t.Error(err)
 			return
