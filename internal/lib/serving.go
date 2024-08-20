@@ -336,12 +336,18 @@ func (f *Serving) DeleteInstanceWithPermHandling(id string, userId string, admin
 	}
 	if f.permissionsV2 != nil && !admin {
 		userId = ""
-		access, err, _ := f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Client.Administrate)
+		//use CheckMultiplePermissions with accessMap to allow deletion of unknown resources
+		accessMap, err, _ := f.permissionsV2.CheckMultiplePermissions(token, ExportInstancePermissionsTopic, []string{id}, permV2Client.Administrate)
 		if err != nil {
 			return deleted, []error{err}
 		}
+		access, exists := accessMap[id]
+		if !exists {
+			log.Println("WARNING: unable to find export instance in permissions-v2", id)
+			return false, nil
+		}
 		if !access {
-			return deleted, []error{fmt.Errorf("access denied")}
+			return false, []error{fmt.Errorf("access denied")}
 		}
 	}
 	deleted, errors = f.deleteInstance(id, userId)
