@@ -44,6 +44,7 @@ type Instance struct {
 	ExportDatabaseID string         `gorm:"type:varchar(255)"`
 	ExportDatabase   ExportDatabase `gorm:"association_autoupdate:false;association_autocreate:false"`
 	TimestampFormat  string         `gorm:"type:varchar(255)"`
+	TimestampUnique  bool           `gorm:"type:bool;DEFAULT:false"`
 	Values           []Value        `gorm:"foreignkey:InstanceID;association_foreignkey:ID"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
