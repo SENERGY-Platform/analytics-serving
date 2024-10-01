@@ -17,6 +17,7 @@ type TimescaleDBExportArgs struct {
 	TableColumns [][3]string `json:"table_columns"`
 	TimeColumn   string      `json:"time_column"`
 	TimeFormat   string      `json:"time_format"`
+	TimeUnique   bool        `json:"time_unique"`
 }
 
 func addTimescaleDBTimeMapping(mappings map[string]string, timePath string) (err error) {
@@ -42,7 +43,7 @@ func addColumns(columns *[][3]string, fieldsMap map[string]string, timePath stri
 	return
 }
 
-func genTimescaleDBExportArgs(args *TimescaleDBExportArgs, exportID string, dbName string, timePath string, timeFormat string, dataFieldsMap map[string]string) (err error) {
+func genTimescaleDBExportArgs(args *TimescaleDBExportArgs, exportID string, dbName string, timePath string, timeFormat string, timeUnique bool, dataFieldsMap map[string]string) (err error) {
 	if timePath == "" {
 		err = errors.New("column containing timestamps required")
 		return
@@ -57,6 +58,7 @@ func genTimescaleDBExportArgs(args *TimescaleDBExportArgs, exportID string, dbNa
 	} else {
 		args.TimeFormat = timeFormat
 	}
+	args.TimeUnique = timeUnique
 	var shortExportID string
 	var shortDBName string
 	shortExportID, err = shortenId(exportID)

@@ -94,7 +94,7 @@ func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string
 			return
 		}
 		timescaleDBExportArgs := TimescaleDBExportArgs{}
-		err = genTimescaleDBExportArgs(&timescaleDBExportArgs, instance.ID.String(), instance.Database, instance.TimePath, instance.TimestampFormat, fieldsMap)
+		err = genTimescaleDBExportArgs(&timescaleDBExportArgs, instance.ID.String(), instance.Database, instance.TimePath, instance.TimestampFormat, instance.TimestampUnique, fieldsMap)
 		if err != nil {
 			return
 		}
