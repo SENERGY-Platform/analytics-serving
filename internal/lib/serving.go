@@ -483,6 +483,7 @@ func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId 
 		Generated:        req.Generated,
 		ExportDatabaseID: req.ExportDatabaseID,
 		TimestampFormat:  req.TimestampFormat,
+		TimestampUnique:  req.TimestampUnique,
 	}
 	if req.TimePrecision != "" {
 		instance.TimePrecision = &req.TimePrecision

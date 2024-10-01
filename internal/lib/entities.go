@@ -36,6 +36,7 @@ type ServingRequest struct {
 	Values           []ServingRequestValue `json:"Values,omitempty"`
 	ExportDatabaseID string                `json:"ExportDatabaseID,omitempty"`
 	TimestampFormat  string                `json:"TimestampFormat,omitempty"`
+	TimestampUnique  bool                  `json:"TimestampUnique,omitempty"`
 }
 
 type ServingRequestValue struct {
