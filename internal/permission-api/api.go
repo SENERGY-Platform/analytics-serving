@@ -19,7 +19,7 @@ package permission_api
 import (
 	"errors"
 	"fmt"
-	"github.com/SENERGY-Platform/permission-search/lib/client"
+	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"net/http"
 	"strconv"
 )
@@ -29,7 +29,7 @@ type PermissionApi struct {
 }
 
 func NewPermissionApi(url string) *PermissionApi {
-	return NewPermissionApiFromClient(client.NewClient(url))
+	return NewPermissionApiFromClient(client.New(url))
 }
 
 func NewPermissionApiFromClient(client client.Client) *PermissionApi {
@@ -37,18 +37,11 @@ func NewPermissionApiFromClient(client client.Client) *PermissionApi {
 }
 
 func (a PermissionApi) UserHasDevicesReadAccess(ids []string, authorization string) (result bool, err error) {
-	response, code, err := client.Query[map[string]bool](a.client, authorization, client.QueryMessage{
-		Resource: "devices",
-		CheckIds: &client.QueryCheckIds{
-			Ids:    ids,
-			Rights: "r",
-		},
-	})
-
-	result = false
+	response, err, code := a.client.CheckMultiplePermissions(authorization, "devices", ids, client.Read)
 	if err != nil {
 		return result, fmt.Errorf("permission API - could not check access rights: %w", err)
 	}
+	result = false
 	if code != http.StatusOK {
 		err = errors.New("permission API - could not check access rights: " + strconv.Itoa(code))
 		return

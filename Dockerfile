@@ -1,4 +1,4 @@
-FROM golang:1.22 AS builder
+FROM golang:1.23 AS builder
 
 COPY . /go/src/app
 WORKDIR /go/src/app
@@ -16,6 +16,6 @@ COPY --from=builder /go/src/app/version.txt .
 
 EXPOSE 8000
 
-LABEL org.opencontainers.image.source https://github.com/SENERGY-Platform/analytics-serving
+LABEL org.opencontainers.image.source=https://github.com/SENERGY-Platform/analytics-serving
 
 ENTRYPOINT ["./analytics-serving"]

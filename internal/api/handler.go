@@ -100,7 +100,7 @@ func StartServer() {
 	default:
 		log.Println("No driver selected")
 	}
-	permission := permission_api.NewPermissionApi(lib.GetEnv("PERMISSION_API_ENDPOINT", ""))
+	permission := permission_api.NewPermissionApi(lib.GetEnv("PERMISSION_V2_URL", ""))
 	pipeline := pipeline_api.NewPipelineApi(lib.GetEnv("PIPELINE_API_ENDPOINT", ""))
 	imp := import_deploy_api.NewImportDeployApi(lib.GetEnv("IMPORT_DEPLOY_API_ENDPOINT", ""))
 	var permV2 permV2Client.Client
@@ -170,9 +170,6 @@ func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permissi
 	handler := c.Handler(router)
 	logger := lib.NewLogger(handler, lib.GetEnv("LOG_LEVEL", "CALL"))
 	defer logger.CloseLogFile()
-	if err != nil {
-		return nil, nil, err
-	}
 	port := lib.GetEnv("API_PORT", "8000")
 	return &http.Server{Addr: lib.GetEnv("SERVERNAME", "") + ":" + port, Handler: logger}, serving, nil
 }
