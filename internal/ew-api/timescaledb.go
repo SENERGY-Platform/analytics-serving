@@ -35,7 +35,7 @@ func addTimescaleDBTimeMapping(mappings map[string]string, timePath string) (err
 func addColumns(columns *[][3]string, fieldsMap map[string]string, timePath string) (err error) {
 	//tp := strings.Split(timePath, ".")
 	//*columns = append(*columns, [3]string{tp[len(tp)-1], "TIMESTAMP", "NOT NULL"})
-	*columns = append(*columns, [3]string{"time", "TIMESTAMP", "NOT NULL"})
+	*columns = append(*columns, [3]string{"time", "TIMESTAMPTZ", "NOT NULL"})
 	for key, _ := range fieldsMap {
 		dst := strings.Split(key, ":")
 		*columns = append(*columns, [3]string{dst[0], timescaleDBTypeMap[dst[1]][0], timescaleDBTypeMap[dst[1]][1]})
