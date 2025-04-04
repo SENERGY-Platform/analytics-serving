@@ -179,5 +179,5 @@ func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permissi
 	logger := lib.NewLogger(handler, lib.GetEnv("LOG_LEVEL", "CALL"))
 	defer logger.CloseLogFile()
 	port := lib.GetEnv("API_PORT", "8000")
-	return &http.Server{Addr: lib.GetEnv("SERVERNAME", "") + ":" + port, Handler: logger}, serving, nil
+	return &http.Server{Addr: ":" + port, Handler: logger}, serving, nil
 }
