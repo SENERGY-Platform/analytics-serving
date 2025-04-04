@@ -67,7 +67,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 
 	t.Setenv("CLEANUP_WAIT_DURATION", "5s")
 	t.Setenv("CLEANUP_CRON", "0 3 * * *")
-	t.Setenv("API_PORT", serverPort)
+	t.Setenv("SERVER_PORT", serverPort)
 	t.Setenv("EXPORT_DATABASE_ID_PREFIX", "")
 
 	//ignored
