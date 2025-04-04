@@ -24,6 +24,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -43,6 +44,18 @@ func (e *Endpoint) getRootEndpoint(w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(lib.Response{"OK"})
 }
 
+// postNewServingInstance godoc
+// @Summary Create export
+// @Description Create an export to the serving layer.
+// @Tags Export
+// @Accept json
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param request body lib.ServingRequest true "request data"
+// @Success	200 {object} lib.Instance "export"
+// @Failure	400 {object} map[string]map[string][]string "error data"
+// @Failure	500
+// @Router /instance [post]
 func (e *Endpoint) postNewServingInstance(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var servingReq lib.ServingRequest
@@ -72,6 +85,19 @@ func (e *Endpoint) postNewServingInstance(w http.ResponseWriter, req *http.Reque
 	}
 }
 
+// putNewServingInstance godoc
+// @Summary Update export
+// @Description Update an export.
+// @Tags Export
+// @Accept json
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param id path string true "export id"
+// @Param request body lib.ServingRequest true "request data"
+// @Success	200 {object} lib.Instance "export"
+// @Failure	400 {object} map[string]map[string][]string "error data"
+// @Failure	500
+// @Router /instance/{id} [put]
 func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var servingReq lib.ServingRequest
@@ -102,6 +128,16 @@ func (e *Endpoint) putNewServingInstance(w http.ResponseWriter, req *http.Reques
 	}
 }
 
+// getServingInstance godoc
+// @Summary Get export
+// @Description Retrieve an export.
+// @Tags Export
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param id path string true "export id"
+// @Success	200 {object} lib.Instance "export"
+// @Failure	500
+// @Router /instance/{id} [get]
 func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	w.Header().Set("Content-Type", "application/json")
@@ -119,6 +155,22 @@ func (e *Endpoint) getServingInstance(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
+// getServingInstances godoc
+// @Summary Get exports
+// @Description Get all exports.
+// @Tags Export
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param limit query string false "limit"
+// @Param offset query string false "offset"
+// @Param order query string false "order"
+// @Param search query string false "search"
+// @Param generated query string false "generated"
+// @Param export_database_id query string false "export_database_id"
+// @Param internal_only query string false "internal_only"
+// @Success	200 {array} lib.Instance "exports"
+// @Failure	500
+// @Router /instance [get]
 func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	args := req.URL.Query()
@@ -138,6 +190,20 @@ func (e *Endpoint) getServingInstances(w http.ResponseWriter, req *http.Request)
 	}
 }
 
+// deleteServingInstance godoc
+// @Summary Delete export
+// @Description Remove an export.
+// @Tags Export
+// @Accept json
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param id path string true "export id"
+// @Success	200
+// @Success	204
+// @Failure	207 {object} map[string]string ""
+// @Failure	404
+// @Failure	500 {object} map[string]string ""
+// @Router /instance/{id} [delete]
 func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	token := getToken(req)
@@ -161,6 +227,18 @@ func (e *Endpoint) deleteServingInstance(w http.ResponseWriter, req *http.Reques
 	}
 }
 
+// deleteServingInstances godoc
+// @Summary Delete exports
+// @Description Remove multiple exports.
+// @Tags Export
+// @Accept json
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param ids body []string true "export ids"
+// @Success	200
+// @Success	204
+// @Success	207 {object} lib.Response ""
+// @Router /instances [delete]
 func (e *Endpoint) deleteServingInstances(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var requestBody []string
@@ -188,6 +266,15 @@ func (e *Endpoint) deleteServingInstances(w http.ResponseWriter, req *http.Reque
 	}
 }
 
+// getServingInstancesAdmin godoc
+// @Summary Get exports
+// @Description Get all exports
+// @Tags Export
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Success	200 {array} lib.Instance "exports"
+// @Failure	500
+// @Router /admin/instance [get]
 func (e *Endpoint) getServingInstancesAdmin(w http.ResponseWriter, req *http.Request) {
 	args := req.URL.Query()
 	token := getToken(req)
@@ -208,6 +295,18 @@ func (e *Endpoint) getServingInstancesAdmin(w http.ResponseWriter, req *http.Req
 	}
 }
 
+// deleteServingInstanceAdmin godoc
+// @Summary Delete export
+// @Description Remove an export.
+// @Tags Export
+// @Produce	json,plain
+// @Param Authorization header string true "jwt token"
+// @Param id path string true "export id"
+// @Success	204
+// @Success 207 {object} map[string]string ""
+// @Failure	404
+// @Failure	500 {object} map[string]string ""
+// @Router /admin/instance/{id} [delete]
 func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	token := getToken(req)
@@ -231,7 +330,24 @@ func (e *Endpoint) deleteServingInstanceAdmin(w http.ResponseWriter, req *http.R
 	}
 }
 
-func (e *Endpoint) readExportDatabases(w http.ResponseWriter, req *http.Request) {
+// getExportDatabases godoc
+// @Summary Get databases
+// @Description List all export databases
+// @Tags Export Database
+// @Accept json,plain
+// @Produce	json,plain
+// @Param Authorization header string true "jwt token"
+// @Param limit query string false "limit"
+// @Param offset query string false "offset"
+// @Param order query string false "order"
+// @Param search query string false "search"
+// @Param deployment query string false "deployment"
+// @Param owner query string false "owner"
+// @Success	200 {array} lib.ExportDatabase "databases"
+// @Failure	400 {object} map[string]string "error message"
+// @Failure	500 {object} map[string]string "error message"
+// @Router /databases [get]
+func (e *Endpoint) getExportDatabases(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	userId, _ := getUserInfo(req)
 	if userId == "" {
@@ -259,7 +375,19 @@ func (e *Endpoint) readExportDatabases(w http.ResponseWriter, req *http.Request)
 	}
 }
 
-func (e *Endpoint) readExportDatabase(w http.ResponseWriter, req *http.Request) {
+// getExportDatabase godoc
+// @Summary Get database
+// @Description Get an export database.
+// @Tags Export Database
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param id path string true "database id"
+// @Success	200 {object} lib.ExportDatabase "database"
+// @Failure	400 {object} map[string]string "error message"
+// @Failure	404 {object} map[string]string "error message"
+// @Failure	500 {object} map[string]string "error message"
+// @Router /databases/{id} [get]
+func (e *Endpoint) getExportDatabase(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	userId, _ := getUserInfo(req)
 	if userId == "" {
@@ -293,7 +421,19 @@ func (e *Endpoint) readExportDatabase(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (e *Endpoint) writeExportDatabase(w http.ResponseWriter, req *http.Request) {
+// postExportDatabase godoc
+// @Summary Create database
+// @Description Create an export database.
+// @Tags Export Database
+// @Accept json
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param request body lib.ExportDatabaseRequest true "export database data"
+// @Success	200 {object} lib.ExportDatabase ""
+// @Failure	400 {object} map[string]string "error message"
+// @Failure	500 {object} map[string]string "error message"
+// @Router /databases [post]
+func (e *Endpoint) postExportDatabase(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	userId, _ := getUserInfo(req)
 	if userId == "" {
@@ -317,15 +457,7 @@ func (e *Endpoint) writeExportDatabase(w http.ResponseWriter, req *http.Request)
 		} else {
 			validated, verrs := ValidateInputs(databaseReq)
 			if validated {
-				var database lib.ExportDatabase
-				var errs []error
-				switch req.Method {
-				case http.MethodPost:
-					database, errs = e.serving.CreateExportDatabase("", databaseReq, userId)
-				case http.MethodPut:
-					vars := mux.Vars(req)
-					database, errs = e.serving.UpdateExportDatabase(vars["id"], databaseReq, userId)
-				}
+				database, errs := e.serving.CreateExportDatabase("", databaseReq, userId)
 				if len(errs) > 0 {
 					w.WriteHeader(http.StatusInternalServerError)
 					err3 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
@@ -350,6 +482,88 @@ func (e *Endpoint) writeExportDatabase(w http.ResponseWriter, req *http.Request)
 	}
 }
 
+// putExportDatabase godoc
+// @Summary Update database
+// @Description Update an export database.
+// @Tags Export Database
+// @Accept json
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param id path string true "database id"
+// @Param request body lib.ExportDatabaseRequest true "export database data"
+// @Success	200 {object} lib.ExportDatabase "export database"
+// @Failure	400 {object} map[string]string "error message"
+// @Failure	404 {object} map[string]string "error message"
+// @Failure	500 {object} map[string]string "error message"
+// @Router /databases/{id} [put]
+func (e *Endpoint) putExportDatabase(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	userId, _ := getUserInfo(req)
+	if userId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": "missing user id"})
+		if err != nil {
+			log.Println(err)
+		}
+	} else {
+		decoder := json.NewDecoder(req.Body)
+		defer req.Body.Close()
+		var databaseReq lib.ExportDatabaseRequest
+		err := decoder.Decode(&databaseReq)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			err2 := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			if err2 != nil {
+				log.Println(err2)
+			}
+		} else {
+			validated, verrs := ValidateInputs(databaseReq)
+			if validated {
+				vars := mux.Vars(req)
+				database, errs := e.serving.UpdateExportDatabase(vars["id"], databaseReq, userId)
+				if len(errs) > 0 {
+					status := http.StatusInternalServerError
+					for _, e := range errs {
+						if gorm.IsRecordNotFoundError(e) {
+							status = http.StatusNotFound
+						}
+					}
+					w.WriteHeader(status)
+					err3 := json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprint(errs)})
+					if err3 != nil {
+						log.Println(err3)
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					err4 := json.NewEncoder(w).Encode(database)
+					if err4 != nil {
+						log.Println(err4)
+					}
+				}
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				err5 := json.NewEncoder(w).Encode(map[string]map[string][]string{"validation_errors": verrs})
+				if err5 != nil {
+					log.Println(err5)
+				}
+			}
+		}
+	}
+}
+
+// deleteExportDatabase godoc
+// @Summary Delete database
+// @Description Remove an export database.
+// @Tags Export Database
+// @Produce	json
+// @Param Authorization header string true "jwt token"
+// @Param id path string true "database id"
+// @Success	200
+// @Failure	400 {object} map[string]string "error message"
+// @Failure	404 {object} map[string]string "error message"
+// @Failure	500 {object} map[string]string "error message"
+// @Router /databases/{id} [delete]
 func (e *Endpoint) deleteExportDatabase(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(req)
@@ -378,6 +592,68 @@ func (e *Endpoint) deleteExportDatabase(w http.ResponseWriter, req *http.Request
 			w.WriteHeader(http.StatusOK)
 		}
 	}
+}
+
+// getSwaggerDoc godoc
+// @Summary Get swagger
+// @Tags Documentation
+// @Produce	json
+// @Success	200 {object} map[string]any "swagger file"
+// @Failure	500 {object} map[string]string "error message"
+// @Router /doc [get]
+func (e *Endpoint) getSwaggerDoc(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	file, err := os.Open("docs/swagger.json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	defer file.Close()
+	_, err = file.WriteTo(w)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// getAsyncapiDoc godoc
+// @Summary Get asyncapi
+// @Tags Documentation
+// @Produce	json
+// @Success	200 {object} map[string]any "asyncapi file"
+// @Failure	500 {object} map[string]string "error message"
+// @Router /async-doc [get]
+func (e *Endpoint) getAsyncapiDoc(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	file, err := os.Open("docs/asyncapi.json")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	defer file.Close()
+	_, err = file.WriteTo(w)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		err := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func getToken(req *http.Request) string {

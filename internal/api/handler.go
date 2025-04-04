@@ -120,6 +120,12 @@ func StartServer() {
 	}
 }
 
+// CreateServerFromDependencies godoc
+// @title Analytics Serving Service API
+// @version 0.0.0
+// @license.name Apache-2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @BasePath /
 func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permission lib.PermissionApiService, permV2 permV2Client.Client, pipeline lib.PipelineApiService, imp lib.ImportDeployService) (*http.Server, *lib.Serving, error) {
 	var err error
 	cleanupWait, err := time.ParseDuration(lib.GetEnv("CLEANUP_WAIT_DURATION", "10s"))
@@ -156,11 +162,13 @@ func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permissi
 	router.HandleFunc("/instances", e.deleteServingInstances).Methods("DELETE")
 	router.HandleFunc("/admin/instance", e.getServingInstancesAdmin).Methods("GET")
 	router.HandleFunc("/admin/instance/{id}", e.deleteServingInstanceAdmin).Methods("DELETE")
-	router.HandleFunc("/databases", e.readExportDatabases).Methods("GET")
-	router.HandleFunc("/databases", e.writeExportDatabase).Methods("POST")
-	router.HandleFunc("/databases/{id}", e.readExportDatabase).Methods("GET")
-	router.HandleFunc("/databases/{id}", e.writeExportDatabase).Methods("PUT")
+	router.HandleFunc("/databases", e.getExportDatabases).Methods("GET")
+	router.HandleFunc("/databases", e.postExportDatabase).Methods("POST")
+	router.HandleFunc("/databases/{id}", e.getExportDatabase).Methods("GET")
+	router.HandleFunc("/databases/{id}", e.putExportDatabase).Methods("PUT")
 	router.HandleFunc("/databases/{id}", e.deleteExportDatabase).Methods("DELETE")
+	router.HandleFunc("/doc", e.getSwaggerDoc).Methods("GET")
+	router.HandleFunc("/async-doc", e.getAsyncapiDoc).Methods("GET")
 	c := cors.New(
 		cors.Options{
 			AllowedHeaders: []string{"Content-Type", "Authorization"},
