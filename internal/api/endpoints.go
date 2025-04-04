@@ -603,7 +603,7 @@ func (e *Endpoint) deleteExportDatabase(w http.ResponseWriter, req *http.Request
 // @Router /doc [get]
 func (e *Endpoint) getSwaggerDoc(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	file, err := os.Open("docs/swagger.json")
+	file, err := os.Open("../../docs/swagger.json")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		err := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -634,7 +634,7 @@ func (e *Endpoint) getSwaggerDoc(w http.ResponseWriter, req *http.Request) {
 // @Router /async-doc [get]
 func (e *Endpoint) getAsyncapiDoc(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	file, err := os.Open("docs/asyncapi.json")
+	file, err := os.Open("../../docs/asyncapi.json")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		err := json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
