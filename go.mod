@@ -2,8 +2,6 @@ module github.com/SENERGY-Platform/analytics-serving
 
 go 1.23
 
-toolchain go1.23.4
-
 require (
 	github.com/SENERGY-Platform/permissions-v2 v0.0.27
 	github.com/go-playground/validator/v10 v10.22.0

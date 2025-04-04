@@ -9,7 +9,7 @@ RUN make build
 
 RUN git log -1 --oneline > version.txt
 
-FROM alpine:latest
+FROM alpine:3.20
 WORKDIR /root/
 COPY --from=builder /go/src/app/analytics-serving .
 COPY --from=builder /go/src/app/version.txt .
