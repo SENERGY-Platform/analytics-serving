@@ -18,6 +18,7 @@ package main
 
 import (
 	"github.com/SENERGY-Platform/analytics-serving/internal/api"
+	api_doc "github.com/SENERGY-Platform/analytics-serving/internal/api-doc"
 	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
 	"log"
 
@@ -38,5 +39,6 @@ func main() {
 		log.Println(err)
 		return
 	}
+	api_doc.PublishAsyncapiDoc()
 	api.StartServer()
 }
