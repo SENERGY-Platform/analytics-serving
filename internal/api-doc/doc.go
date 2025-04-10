@@ -16,6 +16,7 @@ func PublishAsyncapiDoc() {
 		log.Println(err)
 		return
 	}
+	defer file.Close()
 	ctx, cf := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cf()
 	err = adpClient.AsyncapiPutDocFromReader(ctx, "github_com_SENERGY-Platform_analytics-serving", file)
