@@ -1,6 +1,6 @@
 module github.com/SENERGY-Platform/analytics-serving
 
-go 1.23
+go 1.24
 
 require (
 	github.com/SENERGY-Platform/permissions-v2 v0.0.27
