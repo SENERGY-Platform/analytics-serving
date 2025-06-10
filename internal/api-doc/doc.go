@@ -10,7 +10,11 @@ import (
 )
 
 func PublishAsyncapiDoc() {
-	adpClient := client.New(http.DefaultClient, os.Getenv("API_DOCS_PROVIDER_BASE_URL"))
+	docksProviderUrl := os.Getenv("API_DOCS_PROVIDER_BASE_URL")
+	if docksProviderUrl == "" || docksProviderUrl == "-" {
+		return
+	}
+	adpClient := client.New(http.DefaultClient, docksProviderUrl)
 	file, err := os.Open("docs/asyncapi.json")
 	if err != nil {
 		log.Println(err)
