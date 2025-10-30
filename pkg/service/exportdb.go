@@ -1,11 +1,11 @@
 /*
- * Copyright 2024 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-package lib
+package service
 
 import (
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/jinzhu/gorm"
 	"log"
 	"strings"
+
+	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
+	"github.com/google/uuid"
+	"github.com/jinzhu/gorm"
 )
 
-func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (databases []ExportDatabase, errs []error) {
+func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (databases []lib.ExportDatabase, errs []error) {
+	DB := db.DB
 	tx := DB.Select("*").Where("public = TRUE OR user_id = ?", userId)
 	for arg, value := range args {
 		if arg == "limit" {
@@ -42,7 +47,7 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 			search := strings.SplitN(value[0], ":", 2)
 			if len(search) > 1 {
 				allowed := []string{"name", "description", "type"}
-				if StringInSlice(search[0], allowed) {
+				if util.StringInSlice(search[0], allowed) {
 					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
 				}
 			} else {
@@ -80,8 +85,8 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 	return
 }
 
-func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDatabase, errs []error) {
-	errs = DB.Where("id = ? AND (user_id = ? OR public = TRUE)", id, userId).First(&database).GetErrors()
+func (f *Serving) GetExportDatabase(id string, userId string) (database lib.ExportDatabase, errs []error) {
+	errs = db.DB.Where("id = ? AND (user_id = ? OR public = TRUE)", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
 		log.Println("retrieving export-database failed - " + id + " - " + fmt.Sprint(errs))
 		return
@@ -89,7 +94,7 @@ func (f *Serving) GetExportDatabase(id string, userId string) (database ExportDa
 	return
 }
 
-func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
+func (f *Serving) CreateExportDatabase(id string, req lib.ExportDatabaseRequest, userId string) (database lib.ExportDatabase, errs []error) {
 	if id == "" {
 		id = uuid.New().String()
 		if f.exportDatabaseIdPrefix != "" {
@@ -104,8 +109,8 @@ func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, use
 			return
 		}
 	}
-	DB.NewRecord(database)
-	errs = DB.Create(&database).GetErrors()
+	db.DB.NewRecord(database)
+	errs = db.DB.Create(&database).GetErrors()
 	if len(errs) > 0 {
 		log.Println("creating export-database failed - " + fmt.Sprint(errs))
 		return
@@ -114,8 +119,8 @@ func (f *Serving) CreateExportDatabase(id string, req ExportDatabaseRequest, use
 	return
 }
 
-func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase, errs []error) {
-	errs = DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
+func (f *Serving) UpdateExportDatabase(id string, req lib.ExportDatabaseRequest, userId string) (database lib.ExportDatabase, errs []error) {
+	errs = db.DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
 		for _, err := range errs {
 			if gorm.IsRecordNotFoundError(err) {
@@ -132,7 +137,7 @@ func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, use
 	if database.Type != dbType || database.EwFilterTopic != dbEwFilterTopic {
 		errs = append(errs, errors.New("changing 'Type' or 'EwFilterTopic' not allowed"))
 	} else {
-		errs = DB.Save(&database).GetErrors()
+		errs = db.DB.Save(&database).GetErrors()
 	}
 	if len(errs) > 0 {
 		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
@@ -143,21 +148,21 @@ func (f *Serving) UpdateExportDatabase(id string, req ExportDatabaseRequest, use
 }
 
 func (f *Serving) DeleteExportDatabase(id string, userId string) (errs []error) {
-	var database ExportDatabase
-	errs = DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
+	var database lib.ExportDatabase
+	errs = db.DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
 		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
 		return
 	}
-	errs = DB.Delete(&database).GetErrors()
+	errs = db.DB.Delete(&database).GetErrors()
 	if len(errs) > 0 {
 		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
 	}
 	return
 }
 
-func populateExportDatabase(id string, req ExportDatabaseRequest, userId string) (database ExportDatabase) {
-	database = ExportDatabase{
+func populateExportDatabase(id string, req lib.ExportDatabaseRequest, userId string) (database lib.ExportDatabase) {
+	database = lib.ExportDatabase{
 		ID:            id,
 		Name:          req.Name,
 		Description:   req.Description,

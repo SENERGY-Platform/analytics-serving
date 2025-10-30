@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,22 +19,24 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
-	"github.com/golang-jwt/jwt"
-	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
+	"github.com/golang-jwt/jwt"
+	"github.com/jinzhu/gorm"
+
 	"github.com/gorilla/mux"
 )
 
 type Endpoint struct {
-	serving *lib.Serving
+	serving *service.Serving
 }
 
-func NewEndpoint(serving *lib.Serving) *Endpoint {
+func NewEndpoint(serving *service.Serving) *Endpoint {
 	return &Endpoint{serving: serving}
 }
 

@@ -17,7 +17,7 @@
 package mocks
 
 import (
-	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
+	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/google/uuid"
 )
 

@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package lib
+package util
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ func StringInSlice(str string, slice []string) bool {
 	return false
 }
 
-func retry(attempts int, sleep time.Duration, f func() error) (err error) {
+func Retry(attempts int, sleep time.Duration, f func() error) (err error) {
 	for i := 0; ; i++ {
 		err = f()
 		if err == nil {

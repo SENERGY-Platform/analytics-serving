@@ -22,12 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/SENERGY-Platform/analytics-serving/internal/api"
-	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
-	"github.com/SENERGY-Platform/analytics-serving/internal/tests/docker"
-	"github.com/SENERGY-Platform/analytics-serving/internal/tests/mocks"
-	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
-	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
 	"io"
 	"log"
 	"net/http"
@@ -39,6 +33,13 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/SENERGY-Platform/analytics-serving/internal/tests/docker"
+	"github.com/SENERGY-Platform/analytics-serving/internal/tests/mocks"
+	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/api"
+	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
+	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
 )
 
 func TestPermissionsV2Handling(t *testing.T) {

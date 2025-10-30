@@ -1,11 +1,11 @@
 /*
- * Copyright 2024 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-package lib
+package service
 
 import (
 	"errors"
-	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
-	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
-	"github.com/jinzhu/gorm"
 	"log"
 	"slices"
 	"time"
+
+	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
+	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
+	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
+	"github.com/jinzhu/gorm"
 )
 
 func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
@@ -126,7 +129,7 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 
 				//check if permission ids are in local db
 				if len(ids) > 0 {
-					rows, err := DB.Model(&Instance{}).Select("id").Where("id IN (?)", ids).Rows()
+					rows, err := db.DB.Model(&lib.Instance{}).Select("id").Where("id IN (?)", ids).Rows()
 					if err != nil {
 						return true, err
 					}
@@ -166,7 +169,7 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 			done, err = func() (bool, error) {
 				f.permMux.Lock()
 				defer f.permMux.Unlock()
-				rows, err := DB.Model(&Instance{}).Select("id").Limit(option.Limit).Offset(option.Offset).Rows()
+				rows, err := db.DB.Model(&lib.Instance{}).Select("id").Limit(option.Limit).Offset(option.Offset).Rows()
 				if err != nil {
 					return true, err
 				}
@@ -205,7 +208,7 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 func (f *Serving) checkPermConsistency(permIdsMap map[string]bool, id string) (consistent bool, err error) {
 	_, existsInPerm := permIdsMap[id]
 	var existsInDb bool
-	err = DB.Where("id = ?", id).First(&Instance{}).Error
+	err = db.DB.Where("id = ?", id).First(&lib.Instance{}).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		existsInDb = false
 		return existsInPerm == existsInDb, nil

@@ -16,7 +16,7 @@
 
 package client
 
-import "github.com/SENERGY-Platform/analytics-serving/internal/lib"
+import "github.com/SENERGY-Platform/analytics-serving/lib"
 
 type InstancesResponse = lib.InstancesResponse
 type Instance = lib.Instance

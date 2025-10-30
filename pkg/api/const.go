@@ -1,11 +1,11 @@
 /*
- * Copyright 2024 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-package mocks
+package api
 
-import (
-	"github.com/SENERGY-Platform/analytics-serving/lib"
+const (
+	HeaderRequestID = "X-Request-ID"
+	UserIdKey       = "UserId"
 )
 
-type Influx struct{}
+const (
+	HealthCheckPath = "/health-check"
+)
 
-func (i Influx) ForceDeleteMeasurement(id string, userId string, instance lib.Instance) (errs []error) {
-	return nil
-}
+const (
+	MessageSomethingWrong = "something went wrong"
+	MessageParseError     = "failed to parse request"
+)

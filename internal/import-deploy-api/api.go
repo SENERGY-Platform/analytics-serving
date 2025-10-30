@@ -18,8 +18,9 @@ package import_deploy_api
 
 import (
 	"errors"
-	"github.com/parnurzeal/gorequest"
 	"strconv"
+
+	"github.com/parnurzeal/gorequest"
 )
 
 type ImportDeployApi struct {

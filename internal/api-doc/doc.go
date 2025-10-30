@@ -2,11 +2,12 @@ package api_doc
 
 import (
 	"context"
-	"github.com/SENERGY-Platform/api-docs-provider/lib/client"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/SENERGY-Platform/api-docs-provider/lib/client"
 )
 
 func PublishAsyncapiDoc() {

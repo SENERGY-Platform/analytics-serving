@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package lib
+package service
+
+import "github.com/SENERGY-Platform/analytics-serving/lib"
 
 type Driver interface {
-	CreateInstance(instance *Instance, dataFields string, tagFields string) (serviceId string, err error)
-	DeleteInstance(instance *Instance) (err error)
+	CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error)
+	DeleteInstance(instance *lib.Instance) (err error)
 }
 
 type PermissionApiService interface {

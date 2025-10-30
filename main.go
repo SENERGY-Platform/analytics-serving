@@ -21,10 +21,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/SENERGY-Platform/analytics-serving/internal/api"
 	api_doc "github.com/SENERGY-Platform/analytics-serving/internal/api-doc"
-	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/api"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/SENERGY-Platform/go-service-base/srv-info-hdl"
 	sb_util "github.com/SENERGY-Platform/go-service-base/util"
@@ -53,9 +53,9 @@ func main() {
 	util.Logger.Info(srvInfoHdl.Name(), "version", srvInfoHdl.Version())
 	util.Logger.Info("config: " + sb_util.ToJsonStr(cfg))
 
-	lib.Init(&cfg.MySQL)
-	defer lib.Close()
-	m := lib.NewMigration(lib.GetDB(), cfg.MigrationInfo)
+	db.Init(&cfg.MySQL)
+	defer db.Close()
+	m := db.NewMigration(db.GetDB(), cfg.MigrationInfo)
 	m.Migrate()
 	err = m.TmpMigrate()
 	if err != nil {

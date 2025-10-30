@@ -21,11 +21,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
-	"github.com/jinzhu/gorm"
-	"github.com/segmentio/kafka-go"
 	"log"
 	"time"
+
+	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
+	"github.com/jinzhu/gorm"
+	"github.com/segmentio/kafka-go"
 )
 
 type ExportWorker struct {
@@ -176,9 +179,9 @@ func (ew *ExportWorker) CreateFilterTopic(topic string, checkExists bool) (err e
 	return
 }
 
-func (ew *ExportWorker) InitFilterTopics(serving *lib.Serving) (err error) {
+func (ew *ExportWorker) InitFilterTopics(serving *service.Serving) (err error) {
 	var databases []lib.ExportDatabase
-	errs := lib.DB.Find(&databases).GetErrors()
+	errs := db.DB.Find(&databases).GetErrors()
 	if len(errs) > 0 {
 		for _, e := range errs {
 			if gorm.IsRecordNotFoundError(e) {

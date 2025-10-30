@@ -1,11 +1,11 @@
 /*
- * Copyright 2020 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package lib
+package service
 
 import (
 	"errors"
@@ -22,12 +22,14 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	influxClient "github.com/influxdata/influxdb1-client/v2"
 )
 
 type Influx interface {
-	ForceDeleteMeasurement(id string, userId string, instance Instance) (errs []error)
+	ForceDeleteMeasurement(id string, userId string, instance lib.Instance) (errs []error)
 }
 
 type InfluxImpl struct {
@@ -51,7 +53,7 @@ func NewInflux(cfg config.InfluxConfig) *InfluxImpl {
 	return &InfluxImpl{client}
 }
 
-func (i *InfluxImpl) ForceDeleteMeasurement(id string, userId string, instance Instance) (errs []error) {
+func (i *InfluxImpl) ForceDeleteMeasurement(id string, userId string, instance lib.Instance) (errs []error) {
 	defer func() {
 		if err := recover(); err != nil {
 			errs = append(errs, errors.New("force delete influx measurement failed - panic occurred: "+fmt.Sprint(err)))
@@ -67,14 +69,14 @@ func (i *InfluxImpl) ForceDeleteMeasurement(id string, userId string, instance I
 			errs = append(errs, err)
 			return
 		}
-		if !StringInSlice(id, measurements) {
+		if !util.StringInSlice(id, measurements) {
 			break
 		}
 	}
 	return
 }
 
-func (i *InfluxImpl) dropMeasurement(instance Instance) (errors []error) {
+func (i *InfluxImpl) dropMeasurement(instance lib.Instance) (errors []error) {
 	q := influxClient.NewQuery("DROP MEASUREMENT "+"\""+instance.Measurement+"\"", instance.Database, "")
 	response, err := i.client.Query(q)
 	if err != nil {

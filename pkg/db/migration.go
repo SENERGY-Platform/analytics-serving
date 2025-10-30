@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package lib
+package db
 
 import (
 	"encoding/json"
@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/jinzhu/gorm"
 )
 
@@ -37,21 +38,21 @@ func NewMigration(db *gorm.DB, migrationInfo string) *Migration {
 func (m *Migration) Migrate() {
 	if !DB.HasTable("instances") {
 		log.Println("Creating instances table.")
-		DB.CreateTable(&Instance{})
+		DB.CreateTable(&lib.Instance{})
 	}
-	DB.AutoMigrate(&Instance{})
-	DB.Model(&Instance{}).AddForeignKey("export_database_id", "export_databases(id)", "RESTRICT", "CASCADE")
+	DB.AutoMigrate(&lib.Instance{})
+	DB.Model(&lib.Instance{}).AddForeignKey("export_database_id", "export_databases(id)", "RESTRICT", "CASCADE")
 	if !DB.HasTable("values") {
 		log.Println("Creating values table.")
-		DB.CreateTable(&Value{})
+		DB.CreateTable(&lib.Value{})
 	}
-	DB.AutoMigrate(&Value{})
-	DB.Model(&Value{}).AddForeignKey("instance_id", "instances(id)", "CASCADE", "CASCADE")
+	DB.AutoMigrate(&lib.Value{})
+	DB.Model(&lib.Value{}).AddForeignKey("instance_id", "instances(id)", "CASCADE", "CASCADE")
 	if !DB.HasTable("export_databases") {
 		log.Println("Creating export_databases table.")
-		DB.CreateTable(&ExportDatabase{})
+		DB.CreateTable(&lib.ExportDatabase{})
 	}
-	DB.AutoMigrate(&ExportDatabase{})
+	DB.AutoMigrate(&lib.ExportDatabase{})
 }
 
 type MigrationInfo struct {
@@ -74,14 +75,14 @@ func (m *Migration) TmpMigrate() (err error) {
 		if err != nil {
 			return
 		}
-		var database ExportDatabase
+		var database lib.ExportDatabase
 		errs := DB.Where("id = ?", migrationInfo.ID).First(&database).GetErrors()
 		if len(errs) > 0 {
 			err = errors.New(fmt.Sprint(errs))
 			for _, e := range errs {
 				if gorm.IsRecordNotFoundError(e) {
 					err = nil
-					database = ExportDatabase{
+					database = lib.ExportDatabase{
 						ID:            migrationInfo.ID,
 						Name:          migrationInfo.Name,
 						Description:   migrationInfo.Description,
@@ -108,7 +109,7 @@ func (m *Migration) TmpMigrate() (err error) {
 		} else {
 			log.Println("export-database with ID '" + database.ID + "' already exists")
 		}
-		var instances []Instance
+		var instances []lib.Instance
 		errs = DB.Where("export_database_id IS null OR export_database_id = ?", "").Find(&instances).GetErrors()
 		if len(errs) > 0 {
 			err = errors.New(fmt.Sprint(errs))

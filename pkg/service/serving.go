@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package lib
+package service
 
 import (
 	"errors"
@@ -24,6 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
@@ -82,7 +85,7 @@ func NewServing(driver Driver, influx Influx, permissionService PermissionApiSer
 
 const ExportInstancePermissionsTopic = "export-instances"
 
-func (f *Serving) CreateInstance(req ServingRequest, userId string, token string) (instance Instance, err error) {
+func (f *Serving) CreateInstance(req lib.ServingRequest, userId string, token string) (instance lib.Instance, err error) {
 	access, err := f.userHasSourceAccess(req, token)
 	if !access {
 		return
@@ -118,7 +121,7 @@ func (f *Serving) CreateInstance(req ServingRequest, userId string, token string
 	return
 }
 
-func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) (instance Instance, err error) {
+func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req lib.ServingRequest, userId string) (instance lib.Instance, err error) {
 	database, errs := f.GetExportDatabase(req.ExportDatabaseID, userId)
 	if len(errs) > 0 {
 		err = errors.New("export-database does not exist or user unauthorized")
@@ -126,7 +129,7 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req Servin
 	}
 	instance, dataFields, tagFields := populateInstance(id, appId, req, userId)
 	instance.ExportDatabase = database
-	err = retry(5, 5*time.Second, func() (err error) {
+	err = util.Retry(5, 5*time.Second, func() (err error) {
 		serviceId, err := f.driver.CreateInstance(&instance, dataFields, tagFields)
 		if err == nil {
 			instance.RancherServiceId = serviceId
@@ -136,10 +139,10 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req Servin
 	if err != nil {
 		return
 	} else {
-		DB.NewRecord(instance)
-		errs = DB.Create(&instance).GetErrors()
+		db.DB.NewRecord(instance)
+		errs = db.DB.Create(&instance).GetErrors()
 		if len(errs) > 0 {
-			err2 := retry(5, 5*time.Second, func() (e error) {
+			err2 := util.Retry(5, 5*time.Second, func() (e error) {
 				e = f.driver.DeleteInstance(&instance)
 				return
 			})
@@ -155,13 +158,13 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req Servin
 	return
 }
 
-func (f *Serving) UpdateInstance(id string, userId string, request ServingRequest, token string) (instance Instance, errors []error) {
+func (f *Serving) UpdateInstance(id string, userId string, request lib.ServingRequest, token string) (instance lib.Instance, errors []error) {
 	access, err := f.userHasSourceAccess(request, token)
 	if !access {
 		errors = append(errors, err)
 		return
 	}
-	query := DB.Where("id = ? AND user_id = ?", id, userId)
+	query := db.DB.Where("id = ? AND user_id = ?", id, userId)
 	if f.permissionsV2 != nil {
 		access, err, _ = f.permissionsV2.CheckPermission(token, ExportInstancePermissionsTopic, id, permV2Client.Write)
 		if err != nil {
@@ -170,7 +173,7 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 		if !access {
 			return instance, []error{fmt.Errorf("access denied")}
 		}
-		query = DB.Where("id = ?", id)
+		query = db.DB.Where("id = ?", id)
 	}
 	errors = query.Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()
 	if len(errors) > 0 {
@@ -191,8 +194,8 @@ func (f *Serving) UpdateInstance(id string, userId string, request ServingReques
 	return
 }
 
-func (f *Serving) update(id string, userId string, request ServingRequest, instance Instance, uid uuid.UUID, appId uuid.UUID) Instance {
-	err := retry(5, 5*time.Second, func() (err error) {
+func (f *Serving) update(id string, userId string, request lib.ServingRequest, instance lib.Instance, uid uuid.UUID, appId uuid.UUID) lib.Instance {
+	err := util.Retry(5, 5*time.Second, func() (err error) {
 		//we use an empty userId to indicate that the user should not be checked
 		//the check has already been done by UpdateInstance()
 		_, errs := f.deleteInstance(id, "")
@@ -210,8 +213,9 @@ func (f *Serving) update(id string, userId string, request ServingRequest, insta
 	return instance
 }
 
-func (f *Serving) GetInstance(id string, userId string, token string, admin bool) (instance Instance, errors []error) {
+func (f *Serving) GetInstance(id string, userId string, token string, admin bool) (instance lib.Instance, errors []error) {
 	var query *gorm.DB
+	DB := db.DB
 	if admin {
 		query = DB.Where("id = ?", id)
 	} else if f.permissionsV2 != nil {
@@ -230,17 +234,18 @@ func (f *Serving) GetInstance(id string, userId string, token string, admin bool
 	return
 }
 
-func (f *Serving) getInstanceById(id string) (instance Instance, err error) {
-	query := DB.Where("id = ?", id)
+func (f *Serving) getInstanceById(id string) (instance lib.Instance, err error) {
+	query := db.DB.Where("id = ?", id)
 	err = errors.Join(query.Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors()...)
 	return
 }
 
-func (f *Serving) GetInstancesForUser(userId string, args map[string][]string, token string) (instances Instances, count int64, errors []error) {
+func (f *Serving) GetInstancesForUser(userId string, args map[string][]string, token string) (instances lib.Instances, count int64, errors []error) {
 	return f.GetInstances(userId, args, false, token)
 }
 
-func (f *Serving) GetInstances(userId string, args map[string][]string, admin bool, token string) (instances Instances, total int64, errors []error) {
+func (f *Serving) GetInstances(userId string, args map[string][]string, admin bool, token string) (instances lib.Instances, total int64, errors []error) {
+	DB := db.DB
 	tx := DB.Select("*")
 	countTx := DB
 	if !admin {
@@ -252,7 +257,7 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 				return instances, total, []error{err}
 			}
 			if len(ids) == 0 {
-				return Instances{}, 0, nil
+				return lib.Instances{}, 0, nil
 			}
 			tx = DB.Select("*").Where("id IN (?)", ids)
 			countTx = DB.Where("id IN (?)", ids)
@@ -273,7 +278,7 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 			search := strings.SplitN(value[0], ":", 2)
 			if len(search) > 1 {
 				allowed := []string{"name", "description", "entity_name", "service_name"}
-				if StringInSlice(search[0], allowed) {
+				if util.StringInSlice(search[0], allowed) {
 					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
 					countTx = countTx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
 				}
@@ -304,7 +309,7 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 		}
 	}
 	errors = tx.Preload("Values").Preload("ExportDatabase").Find(&instances).GetErrors()
-	countTx.Find(&Instances{}).Count(&total)
+	countTx.Find(&lib.Instances{}).Count(&total)
 	return
 }
 
@@ -353,7 +358,7 @@ func (f *Serving) DeleteInstanceWithPermHandling(id string, userId string, admin
 		return deleted, errors
 	}
 	if f.permissionsV2 != nil && deleted {
-		err := retry(5, 5*time.Second, func() (err error) {
+		err := util.Retry(5, 5*time.Second, func() (err error) {
 			err, _ = f.permissionsV2.RemoveResource(permV2Client.InternalAdminToken, ExportInstancePermissionsTopic, id)
 			return
 		})
@@ -365,12 +370,12 @@ func (f *Serving) DeleteInstanceWithPermHandling(id string, userId string, admin
 }
 
 func (f *Serving) deleteInstance(id string, userId string) (deleted bool, errors []error) {
-	tx := DB.Where("id = ?", id)
+	tx := db.DB.Where("id = ?", id)
 	if userId != "" {
-		tx = DB.Where("id = ? AND user_id = ?", id, userId)
+		tx = db.DB.Where("id = ? AND user_id = ?", id, userId)
 	}
 	deleted = false
-	instance := Instance{}
+	instance := lib.Instance{}
 
 	errors = tx.Preload("ExportDatabase").First(&instance).GetErrors()
 	if len(errors) > 0 {
@@ -382,7 +387,7 @@ func (f *Serving) deleteInstance(id string, userId string) (deleted bool, errors
 		}
 		return
 	}
-	err := retry(5, 5*time.Second, func() (err error) {
+	err := util.Retry(5, 5*time.Second, func() (err error) {
 		err = f.driver.DeleteInstance(&instance)
 		return
 	})
@@ -391,7 +396,7 @@ func (f *Serving) deleteInstance(id string, userId string) (deleted bool, errors
 		return
 	} else {
 		deleted = true
-		errors = DB.Delete(&instance).GetErrors()
+		errors = db.DB.Delete(&instance).GetErrors()
 		if instance.ExportDatabase.Type == "influxdb" {
 			errs := f.influx.ForceDeleteMeasurement(id, userId, instance)
 			if len(errs) > 0 {
@@ -404,10 +409,10 @@ func (f *Serving) deleteInstance(id string, userId string) (deleted bool, errors
 	return deleted, errors
 }
 
-func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
-	var servingRequestValues []ServingRequestValue
+func (f *Serving) CreateFromInstance(instance *lib.Instance) (err error) {
+	var servingRequestValues []lib.ServingRequestValue
 	for _, value := range instance.Values {
-		servingRequestValues = append(servingRequestValues, ServingRequestValue{
+		servingRequestValues = append(servingRequestValues, lib.ServingRequestValue{
 			Name: value.Name,
 			Type: value.Type,
 			Path: value.Path,
@@ -420,7 +425,7 @@ func (f *Serving) CreateFromInstance(instance *Instance) (err error) {
 	return
 }
 
-func (f *Serving) userHasSourceAccess(req ServingRequest, token string) (access bool, err error) {
+func (f *Serving) userHasSourceAccess(req lib.ServingRequest, token string) (access bool, err error) {
 	access = false
 	switch req.FilterType {
 	case "deviceId":
@@ -462,8 +467,8 @@ func (f *Serving) userHasSourceAccess(req ServingRequest, token string) (access 
 	return
 }
 
-func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId string) (instance Instance, dataFields string, tagFields string) {
-	instance = Instance{
+func populateInstance(id uuid.UUID, appId uuid.UUID, req lib.ServingRequest, userId string) (instance lib.Instance, dataFields string, tagFields string) {
+	instance = lib.Instance{
 		ID:               id,
 		Measurement:      id.String(),
 		Name:             req.Name,
@@ -492,11 +497,11 @@ func populateInstance(id uuid.UUID, appId uuid.UUID, req ServingRequest, userId 
 	return
 }
 
-func transformServingValues(id uuid.UUID, requestValues []ServingRequestValue) (values []Value, dataFields string, tagFields string) {
+func transformServingValues(id uuid.UUID, requestValues []lib.ServingRequestValue) (values []lib.Value, dataFields string, tagFields string) {
 	dataFields = "{"
 	tagFields = "{"
 	for _, value := range requestValues {
-		values = append(values, Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path, Tag: value.Tag})
+		values = append(values, lib.Value{InstanceID: id, Name: value.Name, Type: value.Type, Path: value.Path, Tag: value.Tag})
 		if value.Tag {
 			if len(tagFields) > 1 {
 				tagFields = tagFields + ","

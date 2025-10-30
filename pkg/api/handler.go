@@ -1,11 +1,11 @@
 /*
- * Copyright 2019 InfAI (CC SES)
+ * Copyright 2025 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,10 +28,10 @@ import (
 
 	ew_api "github.com/SENERGY-Platform/analytics-serving/internal/ew-api"
 	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/internal/import-deploy-api"
-	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
 	permission_api "github.com/SENERGY-Platform/analytics-serving/internal/permission-api"
 	pipeline_api "github.com/SENERGY-Platform/analytics-serving/internal/pipeline-api"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/gorilla/mux"
@@ -41,7 +41,7 @@ import (
 
 func StartServer(cfg *config.Config) {
 	var err error
-	var driver lib.Driver
+	var driver service.Driver
 	selectedDriver := cfg.Driver
 	switch selectedDriver {
 	default:
@@ -93,7 +93,7 @@ func StartServer(cfg *config.Config) {
 	} else {
 		permV2 = permV2Client.New(cfg.PermissionV2Url)
 	}
-	influx := lib.NewInflux(cfg.InfluxConfig)
+	influx := service.NewInflux(cfg.InfluxConfig)
 	server, _, err := CreateServerFromDependencies(driver, cfg, influx, permission, permV2, pipeline, imp)
 	if err != nil {
 		log.Fatal(err)
@@ -112,14 +112,14 @@ func StartServer(cfg *config.Config) {
 // @license.name Apache-2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @BasePath /
-func CreateServerFromDependencies(driver lib.Driver, cfg *config.Config, influx lib.Influx, permission lib.PermissionApiService, permV2 permV2Client.Client, pipeline lib.PipelineApiService, imp lib.ImportDeployService) (*http.Server, *lib.Serving, error) {
+func CreateServerFromDependencies(driver service.Driver, cfg *config.Config, influx service.Influx, permission service.PermissionApiService, permV2 permV2Client.Client, pipeline service.PipelineApiService, imp service.ImportDeployService) (*http.Server, *service.Serving, error) {
 	var err error
 	cleanupWait, err := time.ParseDuration(cfg.CleanupConfig.WaitDuration)
 	if err != nil {
 		return nil, nil, err
 	}
-	var serving *lib.Serving
-	serving, err = lib.NewServing(driver,
+	var serving *service.Serving
+	serving, err = service.NewServing(driver,
 		influx,
 		permission,
 		pipeline,
@@ -131,7 +131,7 @@ func CreateServerFromDependencies(driver lib.Driver, cfg *config.Config, influx 
 	if err != nil {
 		return nil, nil, err
 	}
-	if drvr, ok := driver.(lib.ExportWorkerKafkaApi); ok {
+	if drvr, ok := driver.(service.ExportWorkerKafkaApi); ok {
 		err = drvr.InitFilterTopics(serving)
 		if err != nil {
 			return nil, nil, err
@@ -162,8 +162,6 @@ func CreateServerFromDependencies(driver lib.Driver, cfg *config.Config, influx 
 			AllowedMethods: []string{"GET", "PUT", "POST", "DELETE", "OPTIONS"},
 		})
 	handler := c.Handler(router)
-	logger := lib.NewLogger(handler, cfg.Logger.Level)
-	defer logger.CloseLogFile()
 	port := cfg.ServerPort
-	return &http.Server{Addr: ":" + strconv.Itoa(port), Handler: logger}, serving, nil
+	return &http.Server{Addr: ":" + strconv.Itoa(port), Handler: handler}, serving, nil
 }
