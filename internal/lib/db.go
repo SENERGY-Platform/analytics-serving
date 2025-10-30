@@ -18,18 +18,20 @@ package lib
 
 import (
 	"log"
+	"strconv"
 
+	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 var DB *gorm.DB
 
-func Init() {
-	connectionString := GetEnv("MYSQL_USER", "") + ":" +
-		GetEnv("MYSQL_PW", "") +
-		"@(" + GetEnv("MYSQL_HOST", "") + ":3306)" +
-		"/" + GetEnv("MYSQL_DB", "") +
+func Init(config *config.MySQLConfig) {
+	connectionString := config.User + ":" +
+		config.Password +
+		"@(" + config.Host + ":" + strconv.Itoa(config.Port) + ")" +
+		"/" + config.Database +
 		"?charset=utf8&parseTime=True&loc=Local"
 	log.Println("Connecting to: " + connectionString)
 	db, err := gorm.Open("mysql", connectionString)

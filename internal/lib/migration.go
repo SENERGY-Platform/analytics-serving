@@ -20,16 +20,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
 	"log"
+
+	"github.com/jinzhu/gorm"
 )
 
 type Migration struct {
-	db *gorm.DB
+	db            *gorm.DB
+	migrationInfo string
 }
 
-func NewMigration(db *gorm.DB) *Migration {
-	return &Migration{db}
+func NewMigration(db *gorm.DB, migrationInfo string) *Migration {
+	return &Migration{db: db, migrationInfo: migrationInfo}
 }
 
 func (m *Migration) Migrate() {
@@ -65,11 +67,10 @@ type MigrationInfo struct {
 }
 
 func (m *Migration) TmpMigrate() (err error) {
-	migInfo := GetEnv("MIGRATION_INFO", "")
-	if migInfo != "" {
+	if m.migrationInfo != "" {
 		log.Println("RUNNING TEMPORARY MIGRATION!")
 		var migrationInfo MigrationInfo
-		err = json.Unmarshal([]byte(migInfo), &migrationInfo)
+		err = json.Unmarshal([]byte(m.migrationInfo), &migrationInfo)
 		if err != nil {
 			return
 		}

@@ -19,15 +19,16 @@ package lib
 import (
 	"errors"
 	"fmt"
+	"log"
+	"strings"
+	"sync"
+	"time"
+
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/google/uuid"
 	_ "github.com/influxdata/influxdb1-client"
 	"github.com/jinzhu/gorm"
 	"github.com/robfig/cron/v3"
-	"log"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Serving struct {
@@ -42,9 +43,6 @@ type Serving struct {
 }
 
 func NewServing(driver Driver, influx Influx, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string, permissionsV2 permV2Client.Client, cleanupChron string, cleanupRecheckWait time.Duration) (*Serving, error) {
-	if influx == nil {
-		influx = NewInflux()
-	}
 	if permissionsV2 != nil {
 		_, err, _ := permissionsV2.SetTopic(permV2Client.InternalAdminToken, permV2Client.Topic{
 			Id: ExportInstancePermissionsTopic,

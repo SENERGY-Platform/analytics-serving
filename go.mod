@@ -1,9 +1,15 @@
 module github.com/SENERGY-Platform/analytics-serving
 
-go 1.24
+go 1.24.0
+
+toolchain go1.24.7
 
 require (
 	github.com/SENERGY-Platform/api-docs-provider/lib/client v0.0.1
+	github.com/SENERGY-Platform/go-service-base/config-hdl v1.2.0
+	github.com/SENERGY-Platform/go-service-base/srv-info-hdl v0.2.0
+	github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1
+	github.com/SENERGY-Platform/go-service-base/util v1.1.0
 	github.com/SENERGY-Platform/permissions-v2 v0.0.27
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -11,7 +17,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c
 	github.com/jinzhu/gorm v1.9.16
-	github.com/joho/godotenv v1.5.1
 	github.com/parnurzeal/gorequest v0.3.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/cors v1.11.0
@@ -29,6 +34,7 @@ require (
 	github.com/SENERGY-Platform/api-docs-provider/lib/models v0.0.1 // indirect
 	github.com/SENERGY-Platform/developer-notifications v0.0.4 // indirect
 	github.com/SENERGY-Platform/go-base-http-client v0.1.0 // indirect
+	github.com/SENERGY-Platform/go-env-loader v0.5.3 // indirect
 	github.com/SENERGY-Platform/service-commons v0.0.0-20240813072046-91b3195dd8fc // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/containerd/containerd v1.7.18 // indirect

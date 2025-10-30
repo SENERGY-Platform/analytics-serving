@@ -17,23 +17,45 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/SENERGY-Platform/analytics-serving/internal/api"
 	api_doc "github.com/SENERGY-Platform/analytics-serving/internal/api-doc"
 	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
-
-	"github.com/joho/godotenv"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
+	"github.com/SENERGY-Platform/go-service-base/srv-info-hdl"
+	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 )
 
+var Version = "0.0.31"
+
 func main() {
-	err := godotenv.Load()
+	defer func() {
+		//os.Exit(ec)
+	}()
+
+	srvInfoHdl := srv_info_hdl.New("serving-service", Version)
+
+	config.ParseFlags()
+
+	cfg, err := config.New(config.ConfPath)
 	if err != nil {
-		log.Print("Error loading .env file")
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		_ = 1
+		return
 	}
-	lib.Init()
+
+	util.InitStructLogger(cfg.Logger.Level)
+
+	util.Logger.Info(srvInfoHdl.Name(), "version", srvInfoHdl.Version())
+	util.Logger.Info("config: " + sb_util.ToJsonStr(cfg))
+
+	lib.Init(&cfg.MySQL)
 	defer lib.Close()
-	m := lib.NewMigration(lib.GetDB())
+	m := lib.NewMigration(lib.GetDB(), cfg.MigrationInfo)
 	m.Migrate()
 	err = m.TmpMigrate()
 	if err != nil {
@@ -41,5 +63,5 @@ func main() {
 		return
 	}
 	api_doc.PublishAsyncapiDoc()
-	api.StartServer()
+	api.StartServer(cfg)
 }

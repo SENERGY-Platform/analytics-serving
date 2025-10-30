@@ -20,7 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
+	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	influxClient "github.com/influxdata/influxdb1-client/v2"
 )
 
@@ -32,11 +34,11 @@ type InfluxImpl struct {
 	client influxClient.Client
 }
 
-func NewInflux() *InfluxImpl {
+func NewInflux(cfg config.InfluxConfig) *InfluxImpl {
 	client, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
-		Addr:     GetEnv("INFLUX_DB_PROTO", "http") + "://" + GetEnv("INFLUX_DB_HOST", "") + ":" + GetEnv("INFLUX_DB_PORT", "8086"),
-		Username: GetEnv("INFLUX_DB_USERNAME", "root"),
-		Password: GetEnv("INFLUX_DB_PASSWORD", ""),
+		Addr:     cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(cfg.Port),
+		Username: cfg.User,
+		Password: cfg.Password,
 	})
 	if err != nil {
 		log.Println("could not connect to influx: " + err.Error())

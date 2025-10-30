@@ -19,8 +19,9 @@ package pipeline_api
 import (
 	"encoding/json"
 	"errors"
-	"github.com/parnurzeal/gorequest"
 	"strconv"
+
+	"github.com/parnurzeal/gorequest"
 )
 
 type PipelineApi struct {

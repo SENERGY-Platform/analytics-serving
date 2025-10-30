@@ -17,26 +17,10 @@
 package lib
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"time"
 )
-
-func GetEnv(key, fallback string) string {
-	value := os.Getenv(key)
-	if len(value) == 0 {
-		return fallback
-	}
-	return value
-}
-
-func ToJson(resp string) map[string]interface{} {
-	data := map[string]interface{}{}
-	json.Unmarshal([]byte(resp), &data)
-	return data
-}
 
 func StringInSlice(str string, slice []string) bool {
 	for _, s := range slice {

@@ -17,51 +17,36 @@
 package api
 
 import (
+	"context"
 	"errors"
-	ew_api "github.com/SENERGY-Platform/analytics-serving/internal/ew-api"
-	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/internal/import-deploy-api"
-	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
-	permission_api "github.com/SENERGY-Platform/analytics-serving/internal/permission-api"
-	pipeline_api "github.com/SENERGY-Platform/analytics-serving/internal/pipeline-api"
-	rancher_api "github.com/SENERGY-Platform/analytics-serving/internal/rancher-api"
-	rancher2_api "github.com/SENERGY-Platform/analytics-serving/internal/rancher2-api"
-	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
-	"github.com/segmentio/kafka-go"
 	"log"
 	"net"
 	"net/http"
 	"runtime/debug"
 	"strconv"
 	"time"
+
+	ew_api "github.com/SENERGY-Platform/analytics-serving/internal/ew-api"
+	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/internal/import-deploy-api"
+	"github.com/SENERGY-Platform/analytics-serving/internal/lib"
+	permission_api "github.com/SENERGY-Platform/analytics-serving/internal/permission-api"
+	pipeline_api "github.com/SENERGY-Platform/analytics-serving/internal/pipeline-api"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
+	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+	"github.com/segmentio/kafka-go"
 )
 
-func StartServer() {
+func StartServer(cfg *config.Config) {
 	var err error
 	var driver lib.Driver
-	selectedDriver := lib.GetEnv("DRIVER", "rancher")
+	selectedDriver := cfg.Driver
 	switch selectedDriver {
-	case "rancher":
-		log.Println("using rancher driver")
-		driver = rancher_api.NewRancher(
-			lib.GetEnv("RANCHER_ENDPOINT", ""),
-			lib.GetEnv("RANCHER_ACCESS_KEY", ""),
-			lib.GetEnv("RANCHER_SECRET_KEY", ""),
-			lib.GetEnv("RANCHER_STACK_ID", ""),
-		)
-	case "rancher2":
-		log.Println("using rancher2 driver")
-		driver = rancher2_api.NewRancher2(
-			lib.GetEnv("RANCHER2_ENDPOINT", ""),
-			lib.GetEnv("RANCHER2_ACCESS_KEY", ""),
-			lib.GetEnv("RANCHER2_SECRET_KEY", ""),
-			lib.GetEnv("RANCHER2_NAMESPACE_ID", ""),
-			lib.GetEnv("RANCHER2_PROJECT_ID", ""),
-		)
-	case "ew":
+	default:
 		log.Println("using export-worker driver")
-		addr := lib.GetEnv("KAFKA_BOOTSTRAP", "")
+		addr := cfg.KafkaBootstrap
 		kafkaProducer := kafka.Writer{
 			Addr:        kafka.TCP(addr),
 			MaxAttempts: 5,
@@ -97,18 +82,19 @@ func StartServer() {
 			_ = controllerConn.Close()
 		}(kafkaControllerConn)
 		driver = ew_api.NewExportWorker(&kafkaProducer, kafkaConn, kafkaControllerConn)
-	default:
-		log.Println("No driver selected")
 	}
-	permission := permission_api.NewPermissionApi(lib.GetEnv("PERMISSION_V2_URL", ""))
-	pipeline := pipeline_api.NewPipelineApi(lib.GetEnv("PIPELINE_API_ENDPOINT", ""))
-	imp := import_deploy_api.NewImportDeployApi(lib.GetEnv("IMPORT_DEPLOY_API_ENDPOINT", ""))
+	permission := permission_api.NewPermissionApi(cfg.PermissionV2Url)
+	pipeline := pipeline_api.NewPipelineApi(cfg.PipelineApiUrl)
+	imp := import_deploy_api.NewImportDeployApi(cfg.ImportDeployApiUrl)
 	var permV2 permV2Client.Client
-	if permV2Url := lib.GetEnv("PERMISSION_V2_URL", ""); permV2Url != "" {
-		permV2 = permV2Client.New(permV2Url)
+	if cfg.PermissionV2Url == "mock" {
+		util.Logger.Debug("using mock permissions")
+		permV2, err = permV2Client.NewTestClient(context.Background())
+	} else {
+		permV2 = permV2Client.New(cfg.PermissionV2Url)
 	}
-	influx := lib.NewInflux()
-	server, _, err := CreateServerFromDependencies(driver, influx, permission, permV2, pipeline, imp)
+	influx := lib.NewInflux(cfg.InfluxConfig)
+	server, _, err := CreateServerFromDependencies(driver, cfg, influx, permission, permV2, pipeline, imp)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -126,9 +112,9 @@ func StartServer() {
 // @license.name Apache-2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @BasePath /
-func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permission lib.PermissionApiService, permV2 permV2Client.Client, pipeline lib.PipelineApiService, imp lib.ImportDeployService) (*http.Server, *lib.Serving, error) {
+func CreateServerFromDependencies(driver lib.Driver, cfg *config.Config, influx lib.Influx, permission lib.PermissionApiService, permV2 permV2Client.Client, pipeline lib.PipelineApiService, imp lib.ImportDeployService) (*http.Server, *lib.Serving, error) {
 	var err error
-	cleanupWait, err := time.ParseDuration(lib.GetEnv("CLEANUP_WAIT_DURATION", "10s"))
+	cleanupWait, err := time.ParseDuration(cfg.CleanupConfig.WaitDuration)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -138,9 +124,9 @@ func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permissi
 		permission,
 		pipeline,
 		imp,
-		lib.GetEnv("EXPORT_DATABASE_ID_PREFIX", ""),
+		cfg.ExportDatabaseIdPrefix,
 		permV2,
-		lib.GetEnv("CLEANUP_CRON", "0 1 * * *"),
+		cfg.CleanupConfig.Cron,
 		cleanupWait)
 	if err != nil {
 		return nil, nil, err
@@ -176,8 +162,8 @@ func CreateServerFromDependencies(driver lib.Driver, influx lib.Influx, permissi
 			AllowedMethods: []string{"GET", "PUT", "POST", "DELETE", "OPTIONS"},
 		})
 	handler := c.Handler(router)
-	logger := lib.NewLogger(handler, lib.GetEnv("LOG_LEVEL", "CALL"))
+	logger := lib.NewLogger(handler, cfg.Logger.Level)
 	defer logger.CloseLogFile()
-	port := lib.GetEnv("SERVER_PORT", "8000")
-	return &http.Server{Addr: ":" + port, Handler: logger}, serving, nil
+	port := cfg.ServerPort
+	return &http.Server{Addr: ":" + strconv.Itoa(port), Handler: logger}, serving, nil
 }

@@ -19,9 +19,10 @@ package permission_api
 import (
 	"errors"
 	"fmt"
-	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"net/http"
 	"strconv"
+
+	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
 )
 
 type PermissionApi struct {
