@@ -76,7 +76,7 @@ func main() {
 		return
 	}
 
-	api_doc.PublishAsyncapiDoc()
+	api_doc.PublishAsyncapiDoc(cfg.ApiDocsProviderBaseUrl)
 
 	httpHandler, err := api.CreateServer(cfg)
 	if err != nil {

@@ -60,6 +60,7 @@ type Config struct {
 	ExportDatabaseIdPrefix string        `json:"export_database_id_prefix" env_var:"EXPORT_DATABASE_ID_PREFIX"`
 	CleanupConfig          CleanupConfig `json:"cleanup_config" env_var:"CLEANUP_CONFIG"`
 	InfluxConfig           InfluxConfig  `json:"influx_config" env_var:"INFLUX_CONFIG"`
+	ApiDocsProviderBaseUrl string        `json:"api_docs_provider_base_url" env_var:"API_DOCS_PROVIDER_BASE_URL"`
 }
 
 func New(path string) (*Config, error) {
@@ -89,6 +90,7 @@ func New(path string) (*Config, error) {
 			WaitDuration: "10s",
 			Cron:         "0 1 * * *",
 		},
+		ApiDocsProviderBaseUrl: "",
 	}
 	err := sb_config_hdl.Load(&cfg, nil, envTypeParser, nil, path)
 	return &cfg, err

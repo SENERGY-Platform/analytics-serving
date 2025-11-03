@@ -10,8 +10,7 @@ import (
 	"github.com/SENERGY-Platform/api-docs-provider/lib/client"
 )
 
-func PublishAsyncapiDoc() {
-	docksProviderUrl := os.Getenv("API_DOCS_PROVIDER_BASE_URL")
+func PublishAsyncapiDoc(docksProviderUrl string) {
 	if docksProviderUrl == "" || docksProviderUrl == "-" {
 		return
 	}
