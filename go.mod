@@ -5,6 +5,7 @@ go 1.24.0
 toolchain go1.24.7
 
 require (
+	github.com/SENERGY-Platform/analytics-pipeline/lib v0.0.0-20251021095503-e4fc32dc684d
 	github.com/SENERGY-Platform/api-docs-provider/lib/client v0.0.1
 	github.com/SENERGY-Platform/gin-middleware v0.12.0
 	github.com/SENERGY-Platform/go-service-base/config-hdl v1.2.0

@@ -27,8 +27,8 @@ import (
 	"syscall"
 	"time"
 
-	api_doc "github.com/SENERGY-Platform/analytics-serving/internal/api-doc"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/api"
+	api_doc "github.com/SENERGY-Platform/analytics-serving/pkg/api-doc"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"

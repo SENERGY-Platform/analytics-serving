@@ -13,6 +13,8 @@ github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA
 github.com/Microsoft/hcsshim v0.12.4 h1:Ev7YUMHAHoWNm+aDSPzc5W9s6E2jyL1szpVDJeZ/Rr4=
 github.com/Microsoft/hcsshim v0.12.4/go.mod h1:Iyl1WVpZzr+UkzjekHZbV8o5Z9ZkxNGx6CtY2Qg/JVQ=
 github.com/PuerkitoBio/goquery v1.5.1/go.mod h1:GsLWisAFVj4WgDibEWF4pvYnkVQBpKBKeU+7zCJoLcc=
+github.com/SENERGY-Platform/analytics-pipeline/lib v0.0.0-20251021095503-e4fc32dc684d h1:S0HJY/JPex4/2lZFcDKB5TZoMWZSYpO/RNb4klZThPs=
+github.com/SENERGY-Platform/analytics-pipeline/lib v0.0.0-20251021095503-e4fc32dc684d/go.mod h1:BN4oIwsTK4InYwgczhP+V3OJJlXt+ilcaJ2/UYzs51w=
 github.com/SENERGY-Platform/api-docs-provider/lib/client v0.0.1 h1:AkY+Z4B2guyhYHM7nlWJT0NUene0rkfFTL4PXSBaxyo=
 github.com/SENERGY-Platform/api-docs-provider/lib/client v0.0.1/go.mod h1:KTSLI0Djg4YTKw4K2n+KCI4Xb9eWd2Ig7IOKie+p/Uw=
 github.com/SENERGY-Platform/api-docs-provider/lib/models v0.0.1 h1:5H1853zOVN6jjUTgRwfslPMGq/VY5PnbJDjxfSuKg6g=

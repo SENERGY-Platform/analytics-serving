@@ -21,6 +21,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/SENERGY-Platform/analytics-pipeline/lib"
 	"github.com/parnurzeal/gorequest"
 )
 
@@ -44,13 +45,13 @@ func (p *PipelineApi) UserHasPipelineAccess(id string, authorization string) (ha
 		err = errors.New("pipeline API - could not get pipeline from pipeline registry: an error occurred")
 		return
 	}
-	pipe := Pipeline{}
+	pipe := lib.Pipeline{}
 	err = json.Unmarshal([]byte(body), &pipe)
 	if err != nil {
 		err = errors.New("pipeline API  - could not parse pipeline: " + err.Error())
 		return
 	}
-	if pipe.Id.String() == id {
+	if pipe.Id == id {
 		hasAccess = true
 	}
 	return
