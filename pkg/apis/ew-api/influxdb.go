@@ -31,7 +31,7 @@ func addInfluxDBTimeMapping(mappings map[string]string, timePath string) {
 }
 
 func addInfluxDBCast(castMap map[string]string, fieldsMap map[string]string) (err error) {
-	for key, _ := range fieldsMap {
+	for key := range fieldsMap {
 		dst := strings.Split(key, ":")
 		castMap[dst[0]] = influxDBTypeMap[dst[1]]
 	}
