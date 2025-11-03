@@ -1,6 +1,6 @@
 FROM golang:1.24 AS builder
 
-ARG VERSION=0.0.42
+ARG VERSION=0.0.31
 
 COPY . /go/src/app
 WORKDIR /go/src/app
@@ -17,6 +17,6 @@ WORKDIR /root/
 COPY --from=builder /go/src/app/app .
 COPY --from=builder /go/src/app/docs docs
 
-#HEALTHCHECK --interval=10s --timeout=5s --retries=3 CMD wget -nv -t1 --spider 'http://localhost/health-check' || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 CMD wget -nv -t1 --spider 'http://localhost/health-check' || exit 1
 
 ENTRYPOINT ["./app"]
