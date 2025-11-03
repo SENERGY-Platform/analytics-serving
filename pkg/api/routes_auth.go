@@ -21,4 +21,16 @@ import (
 	gin_mw "github.com/SENERGY-Platform/gin-middleware"
 )
 
-var routesAuth = gin_mw.Routes[service.Serving]{}
+var routesAuth = gin_mw.Routes[*service.Serving]{
+	postNewServingInstance,
+	putNewServingInstance,
+	getServingInstance,
+	getServingInstances,
+	deleteServingInstance,
+	deleteServingInstances,
+	getExportDatabases,
+	getExportDatabase,
+	postExportDatabase,
+	putExportDatabase,
+	deleteExportDatabase,
+}

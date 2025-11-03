@@ -17,9 +17,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"log"
+	"net/http"
 	"os"
+	"strconv"
+	"sync"
+	"syscall"
+	"time"
 
 	api_doc "github.com/SENERGY-Platform/analytics-serving/internal/api-doc"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/api"
@@ -27,14 +33,16 @@ import (
 	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/SENERGY-Platform/go-service-base/srv-info-hdl"
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
 	sb_util "github.com/SENERGY-Platform/go-service-base/util"
 )
 
 var Version = "0.0.31"
 
 func main() {
+	ec := 0
 	defer func() {
-		//os.Exit(ec)
+		os.Exit(ec)
 	}()
 
 	srvInfoHdl := srv_info_hdl.New("serving-service", Version)
@@ -59,9 +67,65 @@ func main() {
 	m.Migrate()
 	err = m.TmpMigrate()
 	if err != nil {
-		log.Println(err)
+		util.Logger.Error("failed to migrate", "error", err)
+		ec = 1
 		return
 	}
+
 	api_doc.PublishAsyncapiDoc()
-	api.StartServer(cfg)
+
+	httpHandler, err := api.CreateServer(cfg)
+	if err != nil {
+		util.Logger.Error("error creating http engine", "error", err)
+		ec = 1
+		return
+	}
+
+	bindAddress := ":" + strconv.FormatInt(int64(cfg.ServerPort), 10)
+
+	if cfg.Debug {
+		bindAddress = "127.0.0.1:" + strconv.FormatInt(int64(cfg.ServerPort), 10)
+	}
+
+	httpServer := &http.Server{
+		Addr:    bindAddress,
+		Handler: httpHandler}
+
+	ctx, cf := context.WithCancel(context.Background())
+
+	go func() {
+		util.Wait(ctx, util.Logger, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+		cf()
+	}()
+
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		util.Logger.Info("starting http server")
+		if err = httpServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			util.Logger.Error("starting server failed", attributes.ErrorKey, err)
+			ec = 1
+		}
+		cf()
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		util.Logger.Info("stopping http server")
+		ctxWt, cf2 := context.WithTimeout(context.Background(), time.Second*5)
+		defer cf2()
+		if err := httpServer.Shutdown(ctxWt); err != nil {
+			util.Logger.Error("stopping server failed", attributes.ErrorKey, err)
+			ec = 1
+		} else {
+			util.Logger.Info("http server stopped")
+		}
+	}()
+
+	wg.Wait()
 }

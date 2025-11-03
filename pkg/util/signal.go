@@ -14,19 +14,26 @@
  * limitations under the License.
  */
 
-package api
+package util
 
-const (
-	HeaderRequestID = "X-Request-ID"
-	UserIdKey       = "UserId"
-	AdminKey        = "admin"
+import (
+	"context"
+	"log/slog"
+	"os"
+	"os/signal"
 )
 
-const (
-	HealthCheckPath = "/health-check"
-)
-
-const (
-	MessageSomethingWrong = "something went wrong"
-	MessageParseError     = "failed to parse request"
-)
+func Wait(ctx context.Context, logger *slog.Logger, signals ...os.Signal) {
+	ch := make(chan os.Signal, 1)
+	for _, sig := range signals {
+		signal.Notify(ch, sig)
+	}
+	select {
+	case sig := <-ch:
+		logger.Warn("caught os signal", "signal", sig.String())
+		break
+	case <-ctx.Done():
+		break
+	}
+	signal.Stop(ch)
+}

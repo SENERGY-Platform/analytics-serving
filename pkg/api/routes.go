@@ -21,4 +21,8 @@ import (
 	gin_mw "github.com/SENERGY-Platform/gin-middleware"
 )
 
-var routes = gin_mw.Routes[service.Serving]{}
+var routes = gin_mw.Routes[*service.Serving]{
+	getHealthCheckH,
+	getSwaggerDocH,
+	getAsyncapiDocH,
+}

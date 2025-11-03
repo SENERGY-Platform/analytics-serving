@@ -1,15 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "title": "Analytics Serving Service API",
-        "contact": {},
-        "license": {
-            "name": "Apache-2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
-        "version": "0.0.0"
+        "contact": {}
     },
-    "basePath": "/",
     "paths": {
         "/admin/instance": {
             "get": {
@@ -91,35 +84,6 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/async-doc": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Documentation"
-                ],
-                "summary": "Get asyncapi",
-                "responses": {
-                    "200": {
-                        "description": "asyncapi file",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "error message",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -472,35 +436,6 @@
                 }
             }
         },
-        "/doc": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Documentation"
-                ],
-                "summary": "Get swagger",
-                "responses": {
-                    "200": {
-                        "description": "swagger file",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "error message",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/instance": {
             "get": {
                 "description": "Get all exports.",
@@ -608,7 +543,7 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "201": {
                         "description": "export",
                         "schema": {
                             "$ref": "#/definitions/lib.Instance"

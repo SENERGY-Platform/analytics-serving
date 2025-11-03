@@ -16,17 +16,12 @@
 
 package api
 
-const (
-	HeaderRequestID = "X-Request-ID"
-	UserIdKey       = "UserId"
-	AdminKey        = "admin"
+import (
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
+	gin_mw "github.com/SENERGY-Platform/gin-middleware"
 )
 
-const (
-	HealthCheckPath = "/health-check"
-)
-
-const (
-	MessageSomethingWrong = "something went wrong"
-	MessageParseError     = "failed to parse request"
-)
+var routesAdmin = gin_mw.Routes[*service.Serving]{
+	getServingInstancesAdmin,
+	deleteServingInstanceAdmin,
+}

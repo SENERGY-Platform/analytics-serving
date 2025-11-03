@@ -17,10 +17,12 @@
 package api
 
 import (
-	"github.com/go-playground/validator/v10"
 	"log"
 	"reflect"
 	"strings"
+
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
+	"github.com/go-playground/validator/v10"
 )
 
 func ValidateInputs(dataSet interface{}) (bool, map[string][]string) {
@@ -42,7 +44,7 @@ func ValidateInputs(dataSet interface{}) (bool, map[string][]string) {
 		errors := make(map[string][]string)
 
 		if _, ok := err.(*validator.InvalidValidationError); ok {
-			log.Println(err)
+			util.Logger.Error("Invalid validation error", "error", err)
 			return false, errors
 		}
 
