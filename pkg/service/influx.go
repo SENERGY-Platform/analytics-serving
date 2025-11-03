@@ -19,7 +19,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
@@ -43,11 +42,11 @@ func NewInflux(cfg config.InfluxConfig) *InfluxImpl {
 		Password: cfg.Password,
 	})
 	if err != nil {
-		log.Println("could not connect to influx: " + err.Error())
+		util.Logger.Error("could not connect to influx", "error", err)
 	}
 	defer func() {
-		if err := client.Close(); err != nil {
-			log.Println(err)
+		if err = client.Close(); err != nil {
+			util.Logger.Error("could not close influx connection", "error", err)
 		}
 	}()
 	return &InfluxImpl{client}

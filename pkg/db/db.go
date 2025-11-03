@@ -17,36 +17,39 @@
 package db
 
 import (
-	"log"
+	"fmt"
 	"strconv"
 
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 var DB *gorm.DB
 
-func Init(config *config.MySQLConfig) {
+func Init(config *config.MySQLConfig) (err error) {
 	connectionString := config.User + ":" +
 		config.Password +
 		"@(" + config.Host + ":" + strconv.Itoa(config.Port) + ")" +
 		"/" + config.Database +
 		"?charset=utf8&parseTime=True&loc=Local"
-	log.Println("Connecting to: " + connectionString)
+	util.Logger.Info(fmt.Sprintf("connecting to %s", connectionString))
 	db, err := gorm.Open("mysql", connectionString)
 	if err != nil {
-		panic("failed to connect database: " + err.Error())
+		return
 	} else {
-		log.Println("Connected to DB.")
+		util.Logger.Info("connected to DB")
 	}
 	db.Set("gorm:table_options", "ENGINE=InnoDB")
 	db.LogMode(false)
 	DB = db
+	return
 }
 
-func Close() {
-	DB.Close()
+func Close() (err error) {
+	err = DB.Close()
+	return
 }
 
 func GetDB() *gorm.DB {

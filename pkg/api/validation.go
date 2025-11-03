@@ -17,7 +17,6 @@
 package api
 
 import (
-	"log"
 	"reflect"
 	"strings"
 
@@ -49,7 +48,7 @@ func ValidateInputs(dataSet interface{}) (bool, map[string][]string) {
 		}
 
 		for _, err := range err.(validator.ValidationErrors) {
-			log.Println(err.Param())
+			util.Logger.Error("Validation error", "error", err.Param())
 			switch err.Tag() {
 			case "required":
 				errors[err.Field()] = append(errors[err.Field()], "The field '"+err.Field()+"' is required")

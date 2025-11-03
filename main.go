@@ -61,8 +61,12 @@ func main() {
 	util.Logger.Info(srvInfoHdl.Name(), "version", srvInfoHdl.Version())
 	util.Logger.Info("config: " + sb_util.ToJsonStr(cfg))
 
-	db.Init(&cfg.MySQL)
-	defer db.Close()
+	err = db.Init(&cfg.MySQL)
+	if err != nil {
+		util.Logger.Error("failed to connect to database", "error", err)
+		ec = 1
+		return
+	}
 	m := db.NewMigration(db.GetDB(), cfg.MigrationInfo)
 	m.Migrate()
 	err = m.TmpMigrate()
@@ -119,11 +123,19 @@ func main() {
 		util.Logger.Info("stopping http server")
 		ctxWt, cf2 := context.WithTimeout(context.Background(), time.Second*5)
 		defer cf2()
-		if err := httpServer.Shutdown(ctxWt); err != nil {
+		if err = httpServer.Shutdown(ctxWt); err != nil {
 			util.Logger.Error("stopping server failed", attributes.ErrorKey, err)
 			ec = 1
 		} else {
 			util.Logger.Info("http server stopped")
+		}
+
+		util.Logger.Info("closing db connection")
+		if err = db.Close(); err != nil {
+			util.Logger.Error("failed to close db connection", "error", err)
+			ec = 1
+		} else {
+			util.Logger.Info("db connection closed")
 		}
 	}()
 

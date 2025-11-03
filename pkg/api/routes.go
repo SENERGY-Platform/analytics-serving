@@ -26,3 +26,22 @@ var routes = gin_mw.Routes[*service.Serving]{
 	getSwaggerDocH,
 	getAsyncapiDocH,
 }
+
+var routesAdmin = gin_mw.Routes[*service.Serving]{
+	getServingInstancesAdmin,
+	deleteServingInstanceAdmin,
+}
+
+var routesAuth = gin_mw.Routes[*service.Serving]{
+	postNewServingInstance,
+	putNewServingInstance,
+	getServingInstance,
+	getServingInstances,
+	deleteServingInstance,
+	deleteServingInstances,
+	getExportDatabases,
+	getExportDatabase,
+	postExportDatabase,
+	putExportDatabase,
+	deleteExportDatabase,
+}

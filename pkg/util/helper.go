@@ -18,7 +18,6 @@ package util
 
 import (
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -43,8 +42,7 @@ func Retry(attempts int, sleep time.Duration, f func() error) (err error) {
 		}
 
 		time.Sleep(sleep)
-
-		log.Println("retrying after error:", err)
+		Logger.Warn("retrying after error:", "error", err)
 	}
 	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 }

@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"log"
 	"strings"
 
 	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/segmentio/kafka-go"
 )
@@ -85,16 +85,16 @@ func publishInstances(serving *service.Serving, missingIds *[]string) (err error
 	for _, id := range *missingIds {
 		instances, _, errs := serving.GetInstances("", map[string][]string{"export_database_id": {id}}, true, permV2Client.InternalAdminToken)
 		if len(errs) > 0 {
-			log.Println(errs)
+			util.Logger.Error("getting instances failed", "error", errs)
 			err = errors.New("getting instances failed")
 			return
 		}
 		if len(instances) > 0 {
 			for _, instance := range instances {
-				log.Println("publishing instance '" + instance.ID.String() + "' to '" + instance.ExportDatabase.EwFilterTopic + "'")
+				util.Logger.Debug("publishing instance '" + instance.ID.String() + "' to '" + instance.ExportDatabase.EwFilterTopic + "'")
 				err = serving.CreateFromInstance(&instance)
 				if err != nil {
-					log.Println(err)
+					util.Logger.Error("failed to create from instance", "error", err)
 				}
 			}
 		}

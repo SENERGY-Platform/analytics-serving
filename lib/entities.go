@@ -52,11 +52,6 @@ type InstancesResponse struct {
 	Instances Instances `json:"instances,omitempty"`
 }
 
-type Claims struct {
-	Sub         string              `json:"sub,omitempty"`
-	RealmAccess map[string][]string `json:"realm_access,omitempty"`
-}
-
 type ExportDatabaseRequest struct {
 	Name          string `json:"Name" validate:"required"`
 	Description   string `json:"Description"`
@@ -65,17 +60,4 @@ type ExportDatabaseRequest struct {
 	Url           string `json:"Url" validate:"required"`
 	EwFilterTopic string `json:"EwFilterTopic" validate:"required"`
 	Public        bool   `json:"Public"`
-}
-
-func (c Claims) Valid() error {
-	return nil
-}
-
-func (c Claims) IsAdmin() bool {
-	for _, b := range c.RealmAccess["roles"] {
-		if b == "admin" {
-			return true
-		}
-	}
-	return false
 }

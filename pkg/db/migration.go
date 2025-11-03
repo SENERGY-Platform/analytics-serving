@@ -20,9 +20,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/jinzhu/gorm"
 )
 
@@ -37,19 +37,19 @@ func NewMigration(db *gorm.DB, migrationInfo string) *Migration {
 
 func (m *Migration) Migrate() {
 	if !DB.HasTable("instances") {
-		log.Println("Creating instances table.")
+		util.Logger.Debug("Creating instances table.")
 		DB.CreateTable(&lib.Instance{})
 	}
 	DB.AutoMigrate(&lib.Instance{})
 	DB.Model(&lib.Instance{}).AddForeignKey("export_database_id", "export_databases(id)", "RESTRICT", "CASCADE")
 	if !DB.HasTable("values") {
-		log.Println("Creating values table.")
+		util.Logger.Debug("Creating values table.")
 		DB.CreateTable(&lib.Value{})
 	}
 	DB.AutoMigrate(&lib.Value{})
 	DB.Model(&lib.Value{}).AddForeignKey("instance_id", "instances(id)", "CASCADE", "CASCADE")
 	if !DB.HasTable("export_databases") {
-		log.Println("Creating export_databases table.")
+		util.Logger.Debug("Creating export_databases table.")
 		DB.CreateTable(&lib.ExportDatabase{})
 	}
 	DB.AutoMigrate(&lib.ExportDatabase{})
@@ -69,7 +69,7 @@ type MigrationInfo struct {
 
 func (m *Migration) TmpMigrate() (err error) {
 	if m.migrationInfo != "" {
-		log.Println("RUNNING TEMPORARY MIGRATION!")
+		util.Logger.Info("RUNNING TEMPORARY MIGRATION!")
 		var migrationInfo MigrationInfo
 		err = json.Unmarshal([]byte(m.migrationInfo), &migrationInfo)
 		if err != nil {
@@ -93,7 +93,7 @@ func (m *Migration) TmpMigrate() (err error) {
 						UserId:        migrationInfo.UserID,
 						Public:        migrationInfo.Public,
 					}
-					log.Println(fmt.Sprintf("generated ExportDatabase: %+v", database))
+					util.Logger.Info(fmt.Sprintf("generated ExportDatabase: %+v", database))
 					DB.NewRecord(database)
 					errs2 := DB.Create(&database).GetErrors()
 					if len(errs2) > 0 {
@@ -107,7 +107,7 @@ func (m *Migration) TmpMigrate() (err error) {
 				return
 			}
 		} else {
-			log.Println("export-database with ID '" + database.ID + "' already exists")
+			util.Logger.Info("export-database with ID '" + database.ID + "' already exists")
 		}
 		var instances []lib.Instance
 		errs = DB.Where("export_database_id IS null OR export_database_id = ?", "").Find(&instances).GetErrors()
@@ -116,9 +116,9 @@ func (m *Migration) TmpMigrate() (err error) {
 			return
 		}
 		if len(instances) > 0 {
-			log.Println(fmt.Sprintf("found %d exports", len(instances)))
+			util.Logger.Info(fmt.Sprintf("found %d exports", len(instances)))
 			for _, instance := range instances {
-				log.Println("migrating export '" + instance.ID.String() + "'")
+				util.Logger.Info("migrating export '" + instance.ID.String() + "'")
 				instance.ExportDatabaseID = database.ID
 				instance.ExportDatabase = database
 				errs = DB.Save(&instance).GetErrors()

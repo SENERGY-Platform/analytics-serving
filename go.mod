@@ -12,18 +12,16 @@ require (
 	github.com/SENERGY-Platform/go-service-base/struct-logger v0.4.1
 	github.com/SENERGY-Platform/go-service-base/util v1.1.0
 	github.com/SENERGY-Platform/permissions-v2 v0.0.27
+	github.com/SENERGY-Platform/service-commons v0.0.0-20250903071414-1b34f1965afa
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-contrib/requestid v1.0.5
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/mux v1.8.1
 	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c
 	github.com/jinzhu/gorm v1.9.16
 	github.com/parnurzeal/gorequest v0.3.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/rs/cors v1.11.0
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/testcontainers/testcontainers-go v0.31.0
 )
@@ -39,7 +37,6 @@ require (
 	github.com/SENERGY-Platform/developer-notifications v0.0.4 // indirect
 	github.com/SENERGY-Platform/go-base-http-client v0.1.0 // indirect
 	github.com/SENERGY-Platform/go-env-loader v0.5.3 // indirect
-	github.com/SENERGY-Platform/service-commons v0.0.0-20250903071414-1b34f1965afa // indirect
 	github.com/bytedance/sonic v1.13.3 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -68,6 +65,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect

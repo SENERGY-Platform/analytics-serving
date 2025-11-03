@@ -21,12 +21,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/jinzhu/gorm"
 	"github.com/segmentio/kafka-go"
 )
@@ -175,7 +175,7 @@ func (ew *ExportWorker) CreateFilterTopic(topic string, checkExists bool) (err e
 	if err != nil {
 		return
 	}
-	log.Println("topic '" + topic + "' created")
+	util.Logger.Debug("topic '" + topic + "' created")
 	return
 }
 

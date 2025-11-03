@@ -19,7 +19,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -70,9 +69,9 @@ func NewServing(driver Driver, influx Influx, permissionService PermissionApiSer
 	if cleanupChron != "" && cleanupChron != "-" {
 		runner := cron.New()
 		_, err = runner.AddFunc(cleanupChron, func() {
-			err := result.ExportInstanceCleanup(cleanupRecheckWait)
+			err = result.ExportInstanceCleanup(cleanupRecheckWait)
 			if err != nil {
-				log.Println("WARNING: cleanup fail", err)
+				util.Logger.Error("cleanup fail", "error", err)
 			}
 		})
 		if err != nil {
@@ -114,7 +113,7 @@ func (f *Serving) CreateInstance(req lib.ServingRequest, userId string, token st
 	if err != nil {
 		if f.permissionsV2 != nil {
 			temperr, _ := f.permissionsV2.RemoveResource(permV2Client.InternalAdminToken, ExportInstancePermissionsTopic, id.String())
-			log.Printf("ERROR: %v --> try to remove now inconsistent permission: %v\n", err, temperr)
+			util.Logger.Error("remove inconsistent permission", "error", err, "temperr", temperr)
 		}
 		return instance, err
 	}
@@ -150,10 +149,9 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req lib.Se
 				errs = append(errs, err2)
 			}
 			err = errors.New("serving - creating export failed - " + fmt.Sprint(errs))
-			log.Println(err)
 			return
 		}
-		log.Println("serving - successfully created export - " + instance.ID.String())
+		util.Logger.Debug("serving - successfully created export - " + instance.ID.String())
 	}
 	return
 }
@@ -205,10 +203,10 @@ func (f *Serving) update(id string, userId string, request lib.ServingRequest, i
 		return err
 	})
 	if err != nil {
-		log.Println(err)
+		util.Logger.Error("error on update", "error", err)
 	} else {
 		instance, _ = f.createInstanceWithId(uid, appId, request, userId)
-		log.Println("serving - successfully updated export - " + instance.ID.String())
+		util.Logger.Debug("serving - successfully updated export - " + instance.ID.String())
 	}
 	return instance
 }
@@ -346,7 +344,7 @@ func (f *Serving) DeleteInstanceWithPermHandling(id string, userId string, admin
 		}
 		access, exists := accessMap[id]
 		if !exists {
-			log.Println("WARNING: unable to find export instance in permissions-v2", id)
+			util.Logger.Warn("unable to find export instance in permissions-v2 "+id, "id", id)
 			return false, nil
 		}
 		if !access {

@@ -18,12 +18,13 @@ package service
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"slices"
 	"time"
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
 	"github.com/jinzhu/gorm"
@@ -31,7 +32,7 @@ import (
 
 func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 	if f.permissionsV2 != nil {
-		log.Println("start exporting instance permissions cleanup")
+		util.Logger.Info("start exporting instance permissions cleanup")
 		missingInPerm, missingInDb, err := f.findInconsistentExportInstanceIds()
 		if err != nil {
 			return err
@@ -42,7 +43,7 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 		allIds = append(allIds, missingInDb...)
 
 		if len(missingInPerm) > 0 || len(missingInDb) > 0 {
-			log.Printf("wait %v before rechecking and deleting of %v ids", recheckWait.String(), len(allIds))
+			util.Logger.Info(fmt.Sprintf("wait %v before rechecking and deleting of %v ids", recheckWait.String(), len(allIds)))
 			time.Sleep(recheckWait)
 		}
 
@@ -52,13 +53,13 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 		}
 
 		for _, id := range missingInDb {
-			log.Println("rechecking", id)
+			util.Logger.Info(fmt.Sprintf("rechecking missing in db %v", id))
 			consistent, err := f.checkPermConsistency(permIdsMap, id)
 			if err != nil {
 				return err
 			}
 			if !consistent {
-				log.Printf("inconsistent export instance found, remove %v from permissions\n", id)
+				util.Logger.Info(fmt.Sprintf("inconsistent export instance found, remove %v from permissions", id))
 				err, _ = f.permissionsV2.RemoveResource(permV2Client.InternalAdminToken, ExportInstancePermissionsTopic, id)
 				if err != nil {
 					return err
@@ -66,7 +67,7 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 			}
 		}
 		for _, id := range missingInPerm {
-			log.Println("rechecking", id)
+			util.Logger.Info(fmt.Sprintf("rechecking missing in permissions %v", id))
 			consistent, err := f.checkPermConsistency(permIdsMap, id)
 			if err != nil {
 				return err
@@ -77,7 +78,7 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 					return err
 				}
 				if instance.UserId != "" {
-					log.Printf("inconsistent export instance found, add %v with user=%v to permissions\n", id, instance.UserId)
+					util.Logger.Info(fmt.Sprintf("inconsistent export instance found, add %v with user=%v to permissions\n", id, instance.UserId))
 					_, err, _ = f.permissionsV2.SetPermission(
 						permV2Client.InternalAdminToken,
 						ExportInstancePermissionsTopic,
@@ -92,7 +93,7 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 						return err
 					}
 				} else {
-					log.Printf("WARNING: inconsistent export instance without user found, remove %v from local db\n", id)
+					util.Logger.Info(fmt.Sprintf("inconsistent export instance without user found, remove %v from local db", id))
 					_, errs := f.DeleteInstanceWithPermHandling(id, "", true, permV2Client.InternalAdminToken)
 					err = errors.Join(errs...)
 					if err != nil {

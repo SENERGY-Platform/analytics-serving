@@ -18,8 +18,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"strings"
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
@@ -79,7 +77,7 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 				return databases, nil
 			}
 		}
-		log.Println("listing export-databases failed - " + fmt.Sprint(errs))
+		util.Logger.Error("listing export-databases failed", "error", errs)
 		return
 	}
 	return
@@ -88,7 +86,7 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 func (f *Serving) GetExportDatabase(id string, userId string) (database lib.ExportDatabase, errs []error) {
 	errs = db.DB.Where("id = ? AND (user_id = ? OR public = TRUE)", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
-		log.Println("retrieving export-database failed - " + id + " - " + fmt.Sprint(errs))
+		util.Logger.Error("retrieving export-database failed", "error", errs, "id", id)
 		return
 	}
 	return
@@ -112,10 +110,10 @@ func (f *Serving) CreateExportDatabase(id string, req lib.ExportDatabaseRequest,
 	db.DB.NewRecord(database)
 	errs = db.DB.Create(&database).GetErrors()
 	if len(errs) > 0 {
-		log.Println("creating export-database failed - " + fmt.Sprint(errs))
+		util.Logger.Error("creating export-database failed", "error", errs)
 		return
 	}
-	log.Println("successfully created export-database - " + database.ID)
+	util.Logger.Debug("successfully created export-database - " + database.ID)
 	return
 }
 
@@ -128,7 +126,7 @@ func (f *Serving) UpdateExportDatabase(id string, req lib.ExportDatabaseRequest,
 				return
 			}
 		}
-		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
+		util.Logger.Error("updating export-database failed", "error", errs, "id", id)
 		return
 	}
 	dbType := database.Type
@@ -140,10 +138,10 @@ func (f *Serving) UpdateExportDatabase(id string, req lib.ExportDatabaseRequest,
 		errs = db.DB.Save(&database).GetErrors()
 	}
 	if len(errs) > 0 {
-		log.Println("updating export-database failed - " + id + " - " + fmt.Sprint(errs))
+		util.Logger.Error("updating export-database failed", "error", errs, "id", id)
 		return
 	}
-	log.Println("successfully updated export-database - " + database.ID)
+	util.Logger.Debug("successfully updated export-database - " + database.ID)
 	return
 }
 
@@ -151,12 +149,12 @@ func (f *Serving) DeleteExportDatabase(id string, userId string) (errs []error) 
 	var database lib.ExportDatabase
 	errs = db.DB.Where("id = ? AND user_id = ?", id, userId).First(&database).GetErrors()
 	if len(errs) > 0 {
-		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
+		util.Logger.Error("deleting export-database failed", "error", errs, "id", id)
 		return
 	}
 	errs = db.DB.Delete(&database).GetErrors()
 	if len(errs) > 0 {
-		log.Println("deleting export-database failed - " + id + " - " + fmt.Sprint(errs))
+		util.Logger.Error("deleting export-database failed", "error", errs, "id", id)
 	}
 	return
 }
