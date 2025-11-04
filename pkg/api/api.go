@@ -29,7 +29,6 @@ import (
 
 	ew_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/ew-api"
 	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/import-deploy-api"
-	permission_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/permission-api"
 	pipeline_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/pipeline-api"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
@@ -105,7 +104,6 @@ func CreateServer(cfg *config.Config, ctx context.Context, wg *sync.WaitGroup) (
 		}()
 		driver = ew_api.NewExportWorker(cfg.Kafka, &kafkaProducer, kafkaConn, kafkaControllerConn)
 	}
-	permission := permission_api.NewPermissionApi(cfg.PermissionV2Url)
 	pipeline := pipeline_api.NewPipelineApi(cfg.PipelineApiUrl)
 	imp := import_deploy_api.NewImportDeployApi(cfg.ImportDeployApiUrl)
 	var permV2 permV2Client.Client
@@ -120,7 +118,6 @@ func CreateServer(cfg *config.Config, ctx context.Context, wg *sync.WaitGroup) (
 	cleanupWait, err := time.ParseDuration(cfg.CleanupConfig.WaitDuration)
 	serv, err := service.NewServing(driver,
 		influx,
-		permission,
 		pipeline,
 		imp,
 		cfg.ExportDatabaseIdPrefix,

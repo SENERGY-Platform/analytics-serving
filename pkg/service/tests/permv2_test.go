@@ -34,10 +34,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SENERGY-Platform/analytics-serving/internal/tests/docker"
-	"github.com/SENERGY-Platform/analytics-serving/internal/tests/mocks"
 	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/api"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service/tests/docker"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service/tests/mocks"
 	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
 )

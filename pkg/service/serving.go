@@ -36,7 +36,6 @@ import (
 type Serving struct {
 	driver                 Driver
 	influx                 Influx
-	permissionService      PermissionApiService
 	pipelineService        PipelineApiService
 	importDeployService    ImportDeployService
 	exportDatabaseIdPrefix string
@@ -44,7 +43,7 @@ type Serving struct {
 	permMux                sync.RWMutex
 }
 
-func NewServing(driver Driver, influx Influx, permissionService PermissionApiService, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string, permissionsV2 permV2Client.Client, cleanupChron string, cleanupRecheckWait time.Duration) (*Serving, error) {
+func NewServing(driver Driver, influx Influx, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string, permissionsV2 permV2Client.Client, cleanupChron string, cleanupRecheckWait time.Duration) (*Serving, error) {
 	if permissionsV2 != nil {
 		_, err, _ := permissionsV2.SetTopic(permV2Client.InternalAdminToken, permV2Client.Topic{
 			Id: ExportInstancePermissionsTopic,
@@ -56,7 +55,6 @@ func NewServing(driver Driver, influx Influx, permissionService PermissionApiSer
 	result := &Serving{
 		driver:                 driver,
 		influx:                 influx,
-		permissionService:      permissionService,
 		pipelineService:        pipelineService,
 		importDeployService:    importDeployService,
 		exportDatabaseIdPrefix: exportDatabaseIdPrefix,
@@ -81,8 +79,6 @@ func NewServing(driver Driver, influx Influx, permissionService PermissionApiSer
 	}
 	return result, nil
 }
-
-const ExportInstancePermissionsTopic = "export-instances"
 
 func (f *Serving) CreateInstance(req lib.ServingRequest, userId string, token string) (instance lib.Instance, err error) {
 	access, err := f.userHasSourceAccess(req, token)
@@ -427,7 +423,7 @@ func (f *Serving) userHasSourceAccess(req lib.ServingRequest, token string) (acc
 	access = false
 	switch req.FilterType {
 	case "deviceId":
-		hasAccess, e := f.permissionService.UserHasDevicesReadAccess([]string{req.Filter}, token)
+		hasAccess, e, _ := f.permissionsV2.CheckPermission(token, PermV2DeviceTopic, req.Filter, permV2Client.Read)
 		if e != nil {
 			return access, e
 		}
