@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
@@ -35,10 +36,11 @@ type ExportWorker struct {
 	kafkaProducer       *kafka.Writer
 	kafkaConn           *kafka.Conn
 	kafkaControllerConn *kafka.Conn
+	Config              *config.KafkaConfig
 }
 
-func NewExportWorker(kafkaProducer *kafka.Writer, kafkaConn *kafka.Conn, kafkaControllerConn *kafka.Conn) *ExportWorker {
-	return &ExportWorker{kafkaProducer, kafkaConn, kafkaControllerConn}
+func NewExportWorker(cfg config.KafkaConfig, kafkaProducer *kafka.Writer, kafkaConn *kafka.Conn, kafkaControllerConn *kafka.Conn) *ExportWorker {
+	return &ExportWorker{kafkaProducer, kafkaConn, kafkaControllerConn, &cfg}
 }
 
 func (ew *ExportWorker) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (serviceId string, err error) {
@@ -142,7 +144,7 @@ func (ew *ExportWorker) CreateFilterTopic(topic string, checkExists bool) (err e
 		{
 			Topic:             topic,
 			NumPartitions:     1,
-			ReplicationFactor: 2,
+			ReplicationFactor: ew.Config.ReplicationFactor,
 			ConfigEntries: []kafka.ConfigEntry{
 				{
 					ConfigName:  "retention.ms",

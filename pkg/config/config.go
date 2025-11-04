@@ -45,6 +45,11 @@ type CleanupConfig struct {
 	Cron         string `json:"cron" env_var:"CLEANUP_CRON"`
 }
 
+type KafkaConfig struct {
+	Bootstrap         string `json:"bootstrap" env_var:"KAFKA_BOOTSTRAP"`
+	ReplicationFactor int    `json:"replication_factor" env_var:"KAFKA_REPLICATION_FACTOR"`
+}
+
 type Config struct {
 	Logger                 LoggerConfig  `json:"logger" env_var:"LOGGER_CONFIG"`
 	URLPrefix              string        `json:"url_prefix" env_var:"URL_PREFIX"`
@@ -53,7 +58,7 @@ type Config struct {
 	Driver                 string        `json:"driver" env_var:"DRIVER"`
 	MySQL                  MySQLConfig   `json:"mysql" env_var:"MYSQL_CONFIG"`
 	MigrationInfo          string        `json:"migration_info" env_var:"MIGRATION_INFO"`
-	KafkaBootstrap         string        `json:"kafka_bootstrap" env_var:"KAFKA_BOOTSTRAP"`
+	Kafka                  KafkaConfig   `json:"kafka" env_var:"KAFKA_CONFIG"`
 	PermissionV2Url        string        `json:"permission_v2_url" env_var:"PERMISSION_V2_URL"`
 	PipelineApiUrl         string        `json:"pipeline_api_url" env_var:"PIPELINE_API_ENDPOINT"`
 	ImportDeployApiUrl     string        `json:"import_deploy_api_url" env_var:"IMPORT_DEPLOY_API_ENDPOINT"`
@@ -83,8 +88,11 @@ func New(path string) (*Config, error) {
 			User:     "root",
 			Password: "",
 		},
-		MigrationInfo:          "",
-		KafkaBootstrap:         "localhost:9092",
+		MigrationInfo: "",
+		Kafka: KafkaConfig{
+			Bootstrap:         "localhost:9092",
+			ReplicationFactor: 2,
+		},
 		ExportDatabaseIdPrefix: "",
 		CleanupConfig: CleanupConfig{
 			WaitDuration: "10s",

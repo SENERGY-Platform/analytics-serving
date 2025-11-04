@@ -57,7 +57,7 @@ func CreateServer(cfg *config.Config, ctx context.Context, wg *sync.WaitGroup) (
 	switch selectedDriver {
 	default:
 		util.Logger.Info("using export-worker driver")
-		addr := cfg.KafkaBootstrap
+		addr := cfg.Kafka.Bootstrap
 		kafkaProducer := kafka.Writer{
 			Addr:        kafka.TCP(addr),
 			MaxAttempts: 5,
@@ -103,7 +103,7 @@ func CreateServer(cfg *config.Config, ctx context.Context, wg *sync.WaitGroup) (
 			util.Logger.Info("closed kafka controller connection")
 			wg.Done()
 		}()
-		driver = ew_api.NewExportWorker(&kafkaProducer, kafkaConn, kafkaControllerConn)
+		driver = ew_api.NewExportWorker(cfg.Kafka, &kafkaProducer, kafkaConn, kafkaControllerConn)
 	}
 	permission := permission_api.NewPermissionApi(cfg.PermissionV2Url)
 	pipeline := pipeline_api.NewPipelineApi(cfg.PipelineApiUrl)
