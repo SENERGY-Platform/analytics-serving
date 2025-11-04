@@ -17,9 +17,11 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
@@ -35,7 +37,8 @@ type InfluxImpl struct {
 	client influxClient.Client
 }
 
-func NewInflux(cfg config.InfluxConfig) *InfluxImpl {
+func NewInflux(cfg config.InfluxConfig, ctx context.Context, wg *sync.WaitGroup) *InfluxImpl {
+	util.Logger.Info("init influx connection")
 	client, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
 		Addr:     cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(cfg.Port),
 		Username: cfg.User,
@@ -44,10 +47,15 @@ func NewInflux(cfg config.InfluxConfig) *InfluxImpl {
 	if err != nil {
 		util.Logger.Error("could not connect to influx", "error", err)
 	}
-	defer func() {
+	go func() {
+		wg.Add(1)
+		<-ctx.Done()
 		if err = client.Close(); err != nil {
 			util.Logger.Error("could not close influx connection", "error", err)
+		} else {
+			util.Logger.Info("closed influx connection")
 		}
+		wg.Done()
 	}()
 	return &InfluxImpl{client}
 }

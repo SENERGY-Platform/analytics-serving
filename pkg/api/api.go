@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	ew_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/ew-api"
@@ -50,7 +51,7 @@ import (
 // @license.name Apache-2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @BasePath /
-func CreateServer(cfg *config.Config) (r *gin.Engine, err error) {
+func CreateServer(cfg *config.Config, ctx context.Context, wg *sync.WaitGroup) (r *gin.Engine, err error) {
 	var driver service.Driver
 	selectedDriver := cfg.Driver
 	switch selectedDriver {
@@ -64,17 +65,27 @@ func CreateServer(cfg *config.Config) (r *gin.Engine, err error) {
 			BatchSize:   1,
 			Balancer:    &kafka.Hash{},
 		}
-		defer func(producer *kafka.Writer) {
-			_ = producer.Close()
-		}(&kafkaProducer)
+		go func() {
+			wg.Add(1)
+			<-ctx.Done()
+			_ = kafkaProducer.Close()
+			util.Logger.Info("closed kafka producer connection")
+			wg.Done()
+		}()
+
 		var kafkaConn *kafka.Conn
 		kafkaConn, err = kafka.Dial("tcp", addr)
 		if err != nil {
 			return
 		}
-		defer func(conn *kafka.Conn) {
-			_ = conn.Close()
-		}(kafkaConn)
+		go func() {
+			wg.Add(1)
+			<-ctx.Done()
+			_ = kafkaConn.Close()
+			util.Logger.Info("closed kafka connection")
+			wg.Done()
+		}()
+
 		var controller kafka.Broker
 		controller, err = kafkaConn.Controller()
 		if err != nil {
@@ -85,9 +96,13 @@ func CreateServer(cfg *config.Config) (r *gin.Engine, err error) {
 		if err != nil {
 			return
 		}
-		defer func(controllerConn *kafka.Conn) {
-			_ = controllerConn.Close()
-		}(kafkaControllerConn)
+		go func() {
+			wg.Add(1)
+			<-ctx.Done()
+			_ = kafkaControllerConn.Close()
+			util.Logger.Info("closed kafka controller connection")
+			wg.Done()
+		}()
 		driver = ew_api.NewExportWorker(&kafkaProducer, kafkaConn, kafkaControllerConn)
 	}
 	permission := permission_api.NewPermissionApi(cfg.PermissionV2Url)
@@ -100,7 +115,7 @@ func CreateServer(cfg *config.Config) (r *gin.Engine, err error) {
 	} else {
 		permV2 = permV2Client.New(cfg.PermissionV2Url)
 	}
-	influx := service.NewInflux(cfg.InfluxConfig)
+	influx := service.NewInflux(cfg.InfluxConfig, ctx, wg)
 
 	cleanupWait, err := time.ParseDuration(cfg.CleanupConfig.WaitDuration)
 	serv, err := service.NewServing(driver,

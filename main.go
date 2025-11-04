@@ -78,7 +78,16 @@ func main() {
 
 	api_doc.PublishAsyncapiDoc(cfg.ApiDocsProviderBaseUrl)
 
-	httpHandler, err := api.CreateServer(cfg)
+	ctx, cf := context.WithCancel(context.Background())
+
+	wg := &sync.WaitGroup{}
+
+	go func() {
+		util.Wait(ctx, util.Logger, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+		cf()
+	}()
+
+	httpHandler, err := api.CreateServer(cfg, ctx, wg)
 	if err != nil {
 		util.Logger.Error("error creating http engine", "error", err)
 		ec = 1
@@ -94,15 +103,6 @@ func main() {
 	httpServer := &http.Server{
 		Addr:    bindAddress,
 		Handler: httpHandler}
-
-	ctx, cf := context.WithCancel(context.Background())
-
-	go func() {
-		util.Wait(ctx, util.Logger, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-		cf()
-	}()
-
-	wg := &sync.WaitGroup{}
 
 	wg.Add(1)
 
