@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -29,12 +30,18 @@ import (
 
 	"github.com/SENERGY-Platform/analytics-serving/pkg/api"
 	api_doc "github.com/SENERGY-Platform/analytics-serving/pkg/api-doc"
+	ew_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/ew-api"
+	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/import-deploy-api"
+	pipeline_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/pipeline-api"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/SENERGY-Platform/go-service-base/srv-info-hdl"
 	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
 	sb_util "github.com/SENERGY-Platform/go-service-base/util"
+	permV2Client "github.com/SENERGY-Platform/permissions-v2/pkg/client"
+	"github.com/segmentio/kafka-go"
 )
 
 var Version = "0.0.31"
@@ -52,7 +59,7 @@ func main() {
 	cfg, err := config.New(config.ConfPath)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
-		_ = 1
+		ec = 1
 		return
 	}
 
@@ -82,12 +89,83 @@ func main() {
 
 	wg := &sync.WaitGroup{}
 
+	var driver service.Driver
+	selectedDriver := cfg.Driver
+	switch selectedDriver {
+	default:
+		util.Logger.Info("using export-worker driver")
+		addr := cfg.Kafka.Bootstrap
+		kafkaProducer := kafka.Writer{
+			Addr:        kafka.TCP(addr),
+			MaxAttempts: 5,
+			Async:       false,
+			BatchSize:   1,
+			Balancer:    &kafka.Hash{},
+		}
+		go func() {
+			wg.Add(1)
+			<-ctx.Done()
+			_ = kafkaProducer.Close()
+			util.Logger.Info("closed kafka producer connection")
+			wg.Done()
+		}()
+
+		var kafkaConn *kafka.Conn
+		kafkaConn, err = kafka.Dial("tcp", addr)
+		if err != nil {
+			return
+		}
+		go func() {
+			wg.Add(1)
+			<-ctx.Done()
+			_ = kafkaConn.Close()
+			util.Logger.Info("closed kafka connection")
+			wg.Done()
+		}()
+
+		var controller kafka.Broker
+		controller, err = kafkaConn.Controller()
+		if err != nil {
+			return
+		}
+		var kafkaControllerConn *kafka.Conn
+		kafkaControllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+		if err != nil {
+			return
+		}
+		go func() {
+			wg.Add(1)
+			<-ctx.Done()
+			_ = kafkaControllerConn.Close()
+			util.Logger.Info("closed kafka controller connection")
+			wg.Done()
+		}()
+		driver = ew_api.NewExportWorker(cfg.Kafka, &kafkaProducer, kafkaConn, kafkaControllerConn)
+	}
+
 	go func() {
 		util.Wait(ctx, util.Logger, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 		cf()
 	}()
 
-	httpHandler, err := api.CreateServer(cfg, ctx, wg)
+	var pipeline service.PipelineApiService
+	pipeline = pipeline_api.NewPipelineApi(cfg.PipelineApiUrl)
+
+	var imp service.ImportDeployService
+	imp = import_deploy_api.NewImportDeployApi(cfg.ImportDeployApiUrl)
+
+	var influx service.Influx
+	influx = service.NewInflux(cfg.InfluxConfig, ctx, wg)
+
+	var permV2 permV2Client.Client
+	if cfg.PermissionV2Url == "mock" {
+		util.Logger.Debug("using mock permissions")
+		permV2, err = permV2Client.NewTestClient(context.Background())
+	} else {
+		permV2 = permV2Client.New(cfg.PermissionV2Url)
+	}
+
+	httpHandler, err := api.CreateServer(cfg, &driver, &pipeline, &imp, &permV2, &influx)
 	if err != nil {
 		util.Logger.Error("error creating http engine", "error", err)
 		ec = 1

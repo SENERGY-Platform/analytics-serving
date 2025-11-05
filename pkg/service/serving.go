@@ -43,7 +43,14 @@ type Serving struct {
 	permMux                sync.RWMutex
 }
 
-func NewServing(driver Driver, influx Influx, pipelineService PipelineApiService, importDeployService ImportDeployService, exportDatabaseIdPrefix string, permissionsV2 permV2Client.Client, cleanupChron string, cleanupRecheckWait time.Duration) (*Serving, error) {
+func NewServing(driver Driver,
+	influx Influx,
+	pipelineService PipelineApiService,
+	importDeployService ImportDeployService,
+	exportDatabaseIdPrefix string,
+	permissionsV2 permV2Client.Client,
+	cleanupChron string,
+	cleanupRecheckWait time.Duration) (*Serving, error) {
 	if permissionsV2 != nil {
 		_, err, _ := permissionsV2.SetTopic(permV2Client.InternalAdminToken, permV2Client.Topic{
 			Id: ExportInstancePermissionsTopic,

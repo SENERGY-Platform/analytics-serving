@@ -20,12 +20,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"log"
 	"sync"
 	"time"
+
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func MySqlWithNetwork(ctx context.Context, wg *sync.WaitGroup, dbname string) (conStr string, ip string, port string, err error) {

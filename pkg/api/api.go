@@ -17,19 +17,13 @@
 package api
 
 import (
-	"context"
 	"errors"
-	"net"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	ew_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/ew-api"
-	import_deploy_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/import-deploy-api"
-	pipeline_api "github.com/SENERGY-Platform/analytics-serving/pkg/apis/pipeline-api"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
@@ -40,7 +34,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
-	"github.com/segmentio/kafka-go"
 )
 
 // CreateServer godoc
@@ -50,78 +43,20 @@ import (
 // @license.name Apache-2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @BasePath /
-func CreateServer(cfg *config.Config, ctx context.Context, wg *sync.WaitGroup) (r *gin.Engine, err error) {
-	var driver service.Driver
-	selectedDriver := cfg.Driver
-	switch selectedDriver {
-	default:
-		util.Logger.Info("using export-worker driver")
-		addr := cfg.Kafka.Bootstrap
-		kafkaProducer := kafka.Writer{
-			Addr:        kafka.TCP(addr),
-			MaxAttempts: 5,
-			Async:       false,
-			BatchSize:   1,
-			Balancer:    &kafka.Hash{},
-		}
-		go func() {
-			wg.Add(1)
-			<-ctx.Done()
-			_ = kafkaProducer.Close()
-			util.Logger.Info("closed kafka producer connection")
-			wg.Done()
-		}()
-
-		var kafkaConn *kafka.Conn
-		kafkaConn, err = kafka.Dial("tcp", addr)
-		if err != nil {
-			return
-		}
-		go func() {
-			wg.Add(1)
-			<-ctx.Done()
-			_ = kafkaConn.Close()
-			util.Logger.Info("closed kafka connection")
-			wg.Done()
-		}()
-
-		var controller kafka.Broker
-		controller, err = kafkaConn.Controller()
-		if err != nil {
-			return
-		}
-		var kafkaControllerConn *kafka.Conn
-		kafkaControllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
-		if err != nil {
-			return
-		}
-		go func() {
-			wg.Add(1)
-			<-ctx.Done()
-			_ = kafkaControllerConn.Close()
-			util.Logger.Info("closed kafka controller connection")
-			wg.Done()
-		}()
-		driver = ew_api.NewExportWorker(cfg.Kafka, &kafkaProducer, kafkaConn, kafkaControllerConn)
-	}
-	pipeline := pipeline_api.NewPipelineApi(cfg.PipelineApiUrl)
-	imp := import_deploy_api.NewImportDeployApi(cfg.ImportDeployApiUrl)
-	var permV2 permV2Client.Client
-	if cfg.PermissionV2Url == "mock" {
-		util.Logger.Debug("using mock permissions")
-		permV2, err = permV2Client.NewTestClient(context.Background())
-	} else {
-		permV2 = permV2Client.New(cfg.PermissionV2Url)
-	}
-	influx := service.NewInflux(cfg.InfluxConfig, ctx, wg)
+func CreateServer(cfg *config.Config,
+	driver *service.Driver,
+	pipeline *service.PipelineApiService,
+	imp *service.ImportDeployService,
+	permV2 *permV2Client.Client,
+	influx *service.Influx) (r *gin.Engine, err error) {
 
 	cleanupWait, err := time.ParseDuration(cfg.CleanupConfig.WaitDuration)
-	serv, err := service.NewServing(driver,
-		influx,
-		pipeline,
-		imp,
+	serv, err := service.NewServing(*driver,
+		*influx,
+		*pipeline,
+		*imp,
 		cfg.ExportDatabaseIdPrefix,
-		permV2,
+		*permV2,
 		cfg.CleanupConfig.Cron,
 		cleanupWait,
 	)
@@ -129,8 +64,9 @@ func CreateServer(cfg *config.Config, ctx context.Context, wg *sync.WaitGroup) (
 		return
 	}
 
-	if drvr, ok := driver.(service.ExportWorkerKafkaApi); ok {
-		err = drvr.InitFilterTopics(serv)
+	if cfg.Driver == "ew" {
+		drvr := *driver
+		err = drvr.(service.ExportWorkerKafkaApi).InitFilterTopics(serv)
 		if err != nil {
 			return nil, err
 		}

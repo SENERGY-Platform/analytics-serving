@@ -23,10 +23,6 @@ type Driver interface {
 	DeleteInstance(instance *lib.Instance) (err error)
 }
 
-type PermissionApiService interface {
-	UserHasDevicesReadAccess(ids []string, authorization string) (bool, error)
-}
-
 type PipelineApiService interface {
 	UserHasPipelineAccess(id string, authorization string) (bool, error)
 }

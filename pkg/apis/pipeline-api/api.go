@@ -32,6 +32,7 @@ type PipelineApi struct {
 func NewPipelineApi(url string) *PipelineApi {
 	return &PipelineApi{url}
 }
+
 func (p *PipelineApi) UserHasPipelineAccess(id string, authorization string) (hasAccess bool, err error) {
 	hasAccess = false
 	request := gorequest.New()

@@ -23,11 +23,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
-	"runtime/debug"
 	"sort"
 	"strconv"
 	"sync"
@@ -36,8 +35,13 @@ import (
 
 	"github.com/SENERGY-Platform/analytics-serving/lib"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/api"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/db"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/service/tests/docker"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/service/tests/mocks"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
+	"github.com/SENERGY-Platform/go-service-base/struct-logger/attributes"
 	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
 )
@@ -87,9 +91,26 @@ func TestPermissionsV2Handling(t *testing.T) {
 		t.Setenv("INFLUX_DB_PASSWORD", "")
 	*/
 
-	lib.Init()
-	defer lib.Close()
-	m := lib.NewMigration(lib.GetDB())
+	config.ParseFlags()
+
+	cfg, err := config.New(config.ConfPath)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		_ = 1
+		return
+	}
+
+	err = db.Init(&cfg.MySQL)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = db.Close()
+		if err != nil {
+
+		}
+	}()
+	m := db.NewMigration(db.GetDB(), cfg.MigrationInfo)
 	m.Migrate()
 	err = m.TmpMigrate()
 	if err != nil {
@@ -97,35 +118,65 @@ func TestPermissionsV2Handling(t *testing.T) {
 		return
 	}
 
-	perm := mocks.PermissionSearch{}
-
-	permV2, err := client.NewTestClient(ctx)
+	var permV2 client.Client
+	permV2, err = client.NewTestClient(ctx)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	driver := mocks.Driver{}
-	pipeline := mocks.Pipeline{}
-	imp := mocks.Imports{}
-	influx := mocks.Influx{}
+	var driver service.Driver
+	var pipeline service.PipelineApiService
+	var imp service.ImportDeployService
+	var influx service.Influx
+	driver = mocks.Driver{}
+	pipeline = mocks.Pipeline{}
+	imp = mocks.Imports{}
+	influx = mocks.Influx{}
 
-	server, serving, err := api.CreateServerFromDependencies(driver, influx, perm, permV2, pipeline, imp)
+	httpHandler, err := api.CreateServer(cfg, &driver, &pipeline, &imp, &permV2, &influx)
+	if err != nil {
+		util.Logger.Error("error creating http engine", "error", err)
+		return
+	}
+
+	cleanupWait, err := time.ParseDuration(cfg.CleanupConfig.WaitDuration)
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	serving, err := service.NewServing(driver,
+		influx,
+		pipeline,
+		imp,
+		cfg.ExportDatabaseIdPrefix,
+		permV2,
+		cfg.CleanupConfig.Cron,
+		cleanupWait,
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	bindAddress := ":" + strconv.FormatInt(int64(cfg.ServerPort), 10)
+
+	if cfg.Debug {
+		bindAddress = "127.0.0.1:" + strconv.FormatInt(int64(cfg.ServerPort), 10)
+	}
+
+	httpServer := &http.Server{
+		Addr:    bindAddress,
+		Handler: httpHandler}
+
+	wg.Add(1)
+
 	go func() {
-		log.Println("listening on ", server.Addr)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			debug.PrintStack()
-			t.Error("FATAL:", err)
-			return
+		defer wg.Done()
+		util.Logger.Info("starting http server")
+		if err = httpServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			util.Logger.Error("starting server failed", attributes.ErrorKey, err)
 		}
-	}()
-	go func() {
-		<-ctx.Done()
-		log.Println("api shutdown", server.Shutdown(context.Background()))
 	}()
 
 	time.Sleep(1 * time.Second)
@@ -226,7 +277,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 		if exportInstance1.Name != "instance1" {
 			t.Error(exportDatabasePrivate.Name)
 		}
-		ids, err, _ := permV2.ListAccessibleResourceIds(TestToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		ids, err, _ := permV2.ListAccessibleResourceIds(TestToken, service.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
 		if err != nil {
 			t.Error(err)
 			return
@@ -269,7 +320,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			t.Error("expected error")
 			return
 		}
-		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, service.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
 		if err != nil {
 			t.Error(err)
 			return
@@ -313,7 +364,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, service.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
 		if err != nil {
 			t.Error(err)
 			return
@@ -357,7 +408,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, service.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
 		if err != nil {
 			t.Error(err)
 			return
@@ -381,7 +432,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			return
 		}
 
-		ids, err, _ = permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		ids, err, _ = permV2.ListAccessibleResourceIds(SecondOwnerToken, service.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
 		if err != nil {
 			t.Error(err)
 			return
@@ -425,7 +476,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		ids, err, _ := permV2.ListAccessibleResourceIds(SecondOwnerToken, service.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
 		if err != nil {
 			t.Error(err)
 			return
@@ -449,7 +500,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			return
 		}
 
-		ids, err, _ = permV2.ListAccessibleResourceIds(SecondOwnerToken, lib.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
+		ids, err, _ = permV2.ListAccessibleResourceIds(SecondOwnerToken, service.ExportInstancePermissionsTopic, client.ListOptions{}, client.Administrate)
 		if err != nil {
 			t.Error(err)
 			return
@@ -463,7 +514,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 	t.Run("allow testUser access to exportInstance2", func(t *testing.T) {
 		_, err, _ = permV2.SetPermission(
 			client.InternalAdminToken,
-			lib.ExportInstancePermissionsTopic,
+			service.ExportInstancePermissionsTopic,
 			exportInstance2.ID.String(),
 			client.ResourcePermissions{
 				UserPermissions: map[string]model.PermissionsMap{
@@ -724,14 +775,14 @@ func TestPermissionsV2Handling(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		err, _ = permV2.RemoveResource(client.InternalAdminToken, lib.ExportInstancePermissionsTopic, exportInstance.ID.String())
+		err, _ = permV2.RemoveResource(client.InternalAdminToken, service.ExportInstancePermissionsTopic, exportInstance.ID.String())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		_, err, _ = permV2.SetPermission(
 			client.InternalAdminToken,
-			lib.ExportInstancePermissionsTopic,
+			service.ExportInstancePermissionsTopic,
 			"will-be-removed",
 			client.ResourcePermissions{
 				UserPermissions: map[string]model.PermissionsMap{
@@ -750,7 +801,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 			return
 		}
 
-		ids, err, _ := permV2.AdminListResourceIds(client.InternalAdminToken, lib.ExportInstancePermissionsTopic, client.ListOptions{})
+		ids, err, _ := permV2.AdminListResourceIds(client.InternalAdminToken, service.ExportInstancePermissionsTopic, client.ListOptions{})
 		if err != nil {
 			t.Error(err)
 			return
