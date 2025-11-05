@@ -38,7 +38,7 @@ import (
 
 // CreateServer godoc
 // @title Analytics Serving Service API
-// @version 0.0.32
+// @version 0.0.33
 // @description For the administration of analytics exports.
 // @license.name Apache-2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
