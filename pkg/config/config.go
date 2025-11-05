@@ -70,7 +70,7 @@ type Config struct {
 
 func New(path string) (*Config, error) {
 	cfg := Config{
-		ServerPort: 8080,
+		ServerPort: 8000,
 		URLPrefix:  "",
 		Debug:      false,
 		Driver:     "ew",
