@@ -36,7 +36,7 @@ import (
 // @Tags Export
 // @Accept json
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param request body lib.ServingRequest true "request data"
 // @Success	201 {object} lib.Instance "export"
 // @Failure	400 {object} map[string]map[string][]string "error data"
@@ -73,7 +73,7 @@ func postNewServingInstance(serv *service.Serving) (string, string, gin.HandlerF
 // @Tags Export
 // @Accept json
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param id path string true "export id"
 // @Param request body lib.ServingRequest true "request data"
 // @Success	200 {object} lib.Instance "export"
@@ -110,7 +110,7 @@ func putNewServingInstance(serv *service.Serving) (string, string, gin.HandlerFu
 // @Description Retrieve an export.
 // @Tags Export
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param id path string true "export id"
 // @Success	200 {object} lib.Instance "export"
 // @Failure	500
@@ -138,7 +138,7 @@ func getServingInstance(serv *service.Serving) (string, string, gin.HandlerFunc)
 // @Description Get all exports.
 // @Tags Export
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param limit query string false "limit"
 // @Param offset query string false "offset"
 // @Param order query string false "order"
@@ -172,7 +172,7 @@ func getServingInstances(serv *service.Serving) (string, string, gin.HandlerFunc
 // @Tags Export
 // @Accept json
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param id path string true "export id"
 // @Success	200
 // @Success	204
@@ -204,7 +204,7 @@ func deleteServingInstance(serv *service.Serving) (string, string, gin.HandlerFu
 // @Tags Export
 // @Accept json
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param ids body []string true "export ids"
 // @Success	200
 // @Success	204
@@ -242,7 +242,7 @@ func deleteServingInstances(serv *service.Serving) (string, string, gin.HandlerF
 // @Description Get all exports
 // @Tags Export
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Success	200 {array} lib.Instance "exports"
 // @Failure	500
 // @Router /admin/instance [get]
@@ -264,7 +264,7 @@ func getServingInstancesAdmin(serv *service.Serving) (string, string, gin.Handle
 // @Description Remove an export.
 // @Tags Export
 // @Produce	json,plain
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param id path string true "export id"
 // @Success	204
 // @Success 207 {object} map[string]string ""
@@ -295,7 +295,7 @@ func deleteServingInstanceAdmin(serv *service.Serving) (string, string, gin.Hand
 // @Tags Export Database
 // @Accept json,plain
 // @Produce	json,plain
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param limit query string false "limit"
 // @Param offset query string false "offset"
 // @Param order query string false "order"
@@ -324,7 +324,7 @@ func getExportDatabases(serv *service.Serving) (string, string, gin.HandlerFunc)
 // @Description Get an export database.
 // @Tags Export Database
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param id path string true "database id"
 // @Success	200 {object} lib.ExportDatabase "database"
 // @Failure	400 {object} map[string]string "error message"
@@ -355,7 +355,7 @@ func getExportDatabase(serv *service.Serving) (string, string, gin.HandlerFunc) 
 // @Tags Export Database
 // @Accept json
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param request body lib.ExportDatabaseRequest true "export database data"
 // @Success	200 {object} lib.ExportDatabase ""
 // @Failure	400 {object} map[string]string "error message"
@@ -393,7 +393,7 @@ func postExportDatabase(serv *service.Serving) (string, string, gin.HandlerFunc)
 // @Tags Export Database
 // @Accept json
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param id path string true "database id"
 // @Param request body lib.ExportDatabaseRequest true "export database data"
 // @Success	200 {object} lib.ExportDatabase "export database"
@@ -438,7 +438,7 @@ func putExportDatabase(serv *service.Serving) (string, string, gin.HandlerFunc) 
 // @Description Remove an export database.
 // @Tags Export Database
 // @Produce	json
-// @Param Authorization header string true "jwt token"
+// @Security Bearer
 // @Param id path string true "database id"
 // @Success	200
 // @Failure	400 {object} map[string]string "error message"
