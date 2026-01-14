@@ -1,11 +1,24 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "For the administration of analytics exports.",
+        "title": "Analytics Serving Service API",
+        "contact": {},
+        "license": {
+            "name": "Apache-2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "{version}"
     },
+    "basePath": "/",
     "paths": {
         "/admin/instance": {
             "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Get all exports",
                 "produces": [
                     "application/json"
@@ -14,15 +27,6 @@
                     "Export"
                 ],
                 "summary": "Get exports",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "exports",
@@ -41,6 +45,11 @@
         },
         "/admin/instance/{id}": {
             "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Remove an export.",
                 "produces": [
                     "application/json",
@@ -51,13 +60,6 @@
                 ],
                 "summary": "Delete export",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "export id",
@@ -96,6 +98,11 @@
         },
         "/databases": {
             "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "List all export databases",
                 "consumes": [
                     "application/json",
@@ -110,13 +117,6 @@
                 ],
                 "summary": "Get databases",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "limit",
@@ -185,6 +185,11 @@
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Create an export database.",
                 "consumes": [
                     "application/json"
@@ -197,13 +202,6 @@
                 ],
                 "summary": "Create database",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "export database data",
                         "name": "request",
@@ -244,6 +242,11 @@
         },
         "/databases/{id}": {
             "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Get an export database.",
                 "produces": [
                     "application/json"
@@ -253,13 +256,6 @@
                 ],
                 "summary": "Get database",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "database id",
@@ -305,6 +301,11 @@
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Update an export database.",
                 "consumes": [
                     "application/json"
@@ -317,13 +318,6 @@
                 ],
                 "summary": "Update database",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "database id",
@@ -378,6 +372,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Remove an export database.",
                 "produces": [
                     "application/json"
@@ -387,13 +386,6 @@
                 ],
                 "summary": "Delete database",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "database id",
@@ -438,6 +430,11 @@
         },
         "/instance": {
             "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Get all exports.",
                 "produces": [
                     "application/json"
@@ -447,13 +444,6 @@
                 ],
                 "summary": "Get exports",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "limit",
@@ -513,6 +503,11 @@
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Create an export to the serving layer.",
                 "consumes": [
                     "application/json"
@@ -525,13 +520,6 @@
                 ],
                 "summary": "Create export",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "request data",
                         "name": "request",
@@ -572,6 +560,11 @@
         },
         "/instance/{id}": {
             "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Retrieve an export.",
                 "produces": [
                     "application/json"
@@ -581,13 +574,6 @@
                 ],
                 "summary": "Get export",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "export id",
@@ -609,6 +595,11 @@
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Update an export.",
                 "consumes": [
                     "application/json"
@@ -621,13 +612,6 @@
                 ],
                 "summary": "Update export",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "export id",
@@ -673,6 +657,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Remove an export.",
                 "consumes": [
                     "application/json"
@@ -685,13 +674,6 @@
                 ],
                 "summary": "Delete export",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "export id",
@@ -733,6 +715,11 @@
         },
         "/instances": {
             "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
                 "description": "Remove multiple exports.",
                 "consumes": [
                     "application/json"
@@ -745,13 +732,6 @@
                 ],
                 "summary": "Delete exports",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "jwt token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
                     {
                         "description": "export ids",
                         "name": "ids",
