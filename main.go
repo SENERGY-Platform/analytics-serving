@@ -44,7 +44,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-var Version = "0.0.35"
+var Version = "{version}"
 
 func main() {
 	ec := 0
