@@ -113,6 +113,7 @@ func main() {
 		var kafkaConn *kafka.Conn
 		kafkaConn, err = kafka.Dial("tcp", addr)
 		if err != nil {
+			util.Logger.Error("failed to connect to kafka", "error", err)
 			return
 		}
 		go func() {
@@ -126,11 +127,13 @@ func main() {
 		var controller kafka.Broker
 		controller, err = kafkaConn.Controller()
 		if err != nil {
+			util.Logger.Error("failed to get kafka controller", "error", err)
 			return
 		}
 		var kafkaControllerConn *kafka.Conn
 		kafkaControllerConn, err = kafka.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
 		if err != nil {
+			util.Logger.Error("failed to connect to kafka controller", "error", err)
 			return
 		}
 		go func() {
