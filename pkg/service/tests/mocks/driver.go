@@ -18,6 +18,7 @@ package mocks
 
 import (
 	"github.com/SENERGY-Platform/analytics-serving/lib"
+	"github.com/SENERGY-Platform/analytics-serving/pkg/service"
 	"github.com/google/uuid"
 )
 
@@ -28,5 +29,13 @@ func (this Driver) CreateInstance(instance *lib.Instance, dataFields string, tag
 }
 
 func (this Driver) DeleteInstance(instance *lib.Instance) (err error) {
+	return nil
+}
+
+func (this Driver) CreateFilterTopic(topic string, checkExists bool) (err error) {
+	return nil
+}
+
+func (this Driver) InitFilterTopics(serving *service.Serving) (err error) {
 	return nil
 }

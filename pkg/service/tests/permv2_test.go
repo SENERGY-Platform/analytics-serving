@@ -100,6 +100,8 @@ func TestPermissionsV2Handling(t *testing.T) {
 		return
 	}
 
+	util.InitStructLogger(cfg.Logger.Level)
+
 	err = db.Init(&cfg.MySQL)
 	if err != nil {
 		return
@@ -120,6 +122,29 @@ func TestPermissionsV2Handling(t *testing.T) {
 
 	var permV2 client.Client
 	permV2, err = client.NewTestClient(ctx)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// the device access check of the serving api asks permissions-v2 for the devices topic
+	_, err, _ = permV2.SetTopic(client.InternalAdminToken, client.Topic{Id: service.PermV2DeviceTopic})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_, err, _ = permV2.SetPermission(
+		client.InternalAdminToken,
+		service.PermV2DeviceTopic,
+		"device1",
+		client.ResourcePermissions{
+			UserPermissions: map[string]model.PermissionsMap{
+				TestTokenUser:        {Read: true, Write: true, Execute: true, Administrate: true},
+				SecendOwnerTokenUser: {Read: true, Write: true, Execute: true, Administrate: true}},
+			GroupPermissions: map[string]model.PermissionsMap{},
+			RolePermissions:  map[string]model.PermissionsMap{},
+		},
+	)
 	if err != nil {
 		t.Error(err)
 		return
@@ -174,8 +199,20 @@ func TestPermissionsV2Handling(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		util.Logger.Info("starting http server")
-		if err = httpServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		if err := httpServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			util.Logger.Error("starting server failed", attributes.ErrorKey, err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		util.Logger.Info("stopping http server")
+		ctxWt, cf := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cf()
+		if err := httpServer.Shutdown(ctxWt); err != nil {
+			util.Logger.Error("stopping server failed", attributes.ErrorKey, err)
 		}
 	}()
 
