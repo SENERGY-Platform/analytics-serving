@@ -314,13 +314,25 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 	return
 }
 
+// DeleteInstancesForUser deletes the given instances concurrently and reports deleted ids and errors in input order.
+// It must not hold permMux while waiting: every delete takes the read lock itself, and a pending writer would block them.
 func (f *Serving) DeleteInstancesForUser(ids []string, userId string, token string) (deleted []string, errors []error) {
-	for _, id := range ids {
-		success, errs := f.DeleteInstanceWithPermHandling(id, userId, false, token)
-		if success {
-			deleted = append(deleted, id)
+	// Duplicates are dropped so that no instance is deleted by two goroutines at once.
+	ids = uniqueInOrder(ids)
+	type result struct {
+		success bool
+		errs    []error
+	}
+	results := make([]result, len(ids))
+	forEachParallel(len(ids), maxParallelDeletes, func(i int) {
+		success, errs := f.DeleteInstanceWithPermHandling(ids[i], userId, false, token)
+		results[i] = result{success: success, errs: errs}
+	})
+	for i, r := range results {
+		if r.success {
+			deleted = append(deleted, ids[i])
 		} else {
-			errors = append(errors, errs...)
+			errors = append(errors, r.errs...)
 		}
 	}
 	return

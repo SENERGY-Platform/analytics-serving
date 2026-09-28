@@ -20,3 +20,7 @@ const (
 	PermV2DeviceTopic              = "devices"
 	ExportInstancePermissionsTopic = "export-instances"
 )
+
+// maxParallelDeletes bounds the concurrent deletes of one bulk request, each of which queries the database and
+// calls the export worker and permissions-v2.
+const maxParallelDeletes = 8
