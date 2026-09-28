@@ -29,12 +29,9 @@ import (
 var DB *gorm.DB
 
 func Init(config *config.MySQLConfig) (err error) {
-	connectionString := config.User + ":" +
-		config.Password +
-		"@(" + config.Host + ":" + strconv.Itoa(config.Port) + ")" +
-		"/" + config.Database +
-		"?charset=utf8&parseTime=True&loc=Local"
-	util.Logger.Info(fmt.Sprintf("connecting to %s", connectionString))
+	address := "(" + config.Host + ":" + strconv.Itoa(config.Port) + ")/" + config.Database
+	connectionString := config.User + ":" + config.Password.Value() + "@" + address + "?charset=utf8&parseTime=True&loc=Local"
+	util.Logger.Info(fmt.Sprintf("connecting to %s as %s", address, config.User))
 	db, err := gorm.Open("mysql", connectionString)
 	if err != nil {
 		return

@@ -42,7 +42,7 @@ func NewInflux(cfg config.InfluxConfig, ctx context.Context, wg *sync.WaitGroup)
 	client, err := influxClient.NewHTTPClient(influxClient.HTTPConfig{
 		Addr:     cfg.Protocol + "://" + cfg.Host + ":" + strconv.Itoa(cfg.Port),
 		Username: cfg.User,
-		Password: cfg.Password,
+		Password: cfg.Password.Value(),
 	})
 	if err != nil {
 		util.Logger.Error("could not connect to influx", "error", err)

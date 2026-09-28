@@ -18,22 +18,23 @@ package config
 
 import (
 	sb_config_hdl "github.com/SENERGY-Platform/go-service-base/config-hdl"
+	sb_config_types "github.com/SENERGY-Platform/go-service-base/config-hdl/types"
 )
 
 type MySQLConfig struct {
-	Host     string `json:"host" env_var:"MYSQL_HOST"`
-	Port     int    `json:"port" env_var:"MYSQL_PORT"`
-	User     string `json:"user" env_var:"MYSQL_USER"`
-	Password string `json:"password" env_var:"MYSQL_PW"`
-	Database string `json:"database" env_var:"MYSQL_DB"`
+	Host     string                 `json:"host" env_var:"MYSQL_HOST"`
+	Port     int                    `json:"port" env_var:"MYSQL_PORT"`
+	User     string                 `json:"user" env_var:"MYSQL_USER"`
+	Password sb_config_types.Secret `json:"password" env_var:"MYSQL_PW"`
+	Database string                 `json:"database" env_var:"MYSQL_DB"`
 }
 
 type InfluxConfig struct {
-	Protocol string `json:"protocol" env_var:"INFLUX_DB_PROTO"`
-	Host     string `json:"host" env_var:"INFLUX_DB_HOST"`
-	Port     int    `json:"port" env_var:"INFLUX_DB_PORT"`
-	User     string `json:"user" env_var:"INFLUX_DB_USERNAME"`
-	Password string `json:"password" env_var:"INFLUX_DB_PASSWORD"`
+	Protocol string                 `json:"protocol" env_var:"INFLUX_DB_PROTO"`
+	Host     string                 `json:"host" env_var:"INFLUX_DB_HOST"`
+	Port     int                    `json:"port" env_var:"INFLUX_DB_PORT"`
+	User     string                 `json:"user" env_var:"INFLUX_DB_USERNAME"`
+	Password sb_config_types.Secret `json:"password" env_var:"INFLUX_DB_PASSWORD"`
 }
 
 type LoggerConfig struct {
