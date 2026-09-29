@@ -38,6 +38,8 @@ func Init(config *config.MySQLConfig) (err error) {
 	} else {
 		util.Logger.Info("connected to DB")
 	}
+	db.DB().SetMaxOpenConns(config.MaxOpenConns)
+	db.DB().SetMaxIdleConns(config.MaxIdleConns)
 	db.Set("gorm:table_options", "ENGINE=InnoDB")
 	db.LogMode(false)
 	DB = db

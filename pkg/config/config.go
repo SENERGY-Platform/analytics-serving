@@ -27,6 +27,9 @@ type MySQLConfig struct {
 	User     string                 `json:"user" env_var:"MYSQL_USER"`
 	Password sb_config_types.Secret `json:"password" env_var:"MYSQL_PW"`
 	Database string                 `json:"database" env_var:"MYSQL_DB"`
+	// Pool limits as in database/sql: MaxOpenConns 0 is unlimited, MaxIdleConns 0 keeps no idle connection.
+	MaxOpenConns int `json:"max_open_conns" env_var:"MYSQL_MAX_OPEN_CONNS"`
+	MaxIdleConns int `json:"max_idle_conns" env_var:"MYSQL_MAX_IDLE_CONNS"`
 }
 
 type InfluxConfig struct {
@@ -76,11 +79,13 @@ func New(path string) (*Config, error) {
 		Debug:      false,
 		Driver:     "ew",
 		MySQL: MySQLConfig{
-			Host:     "localhost",
-			Port:     3306,
-			User:     "serving",
-			Password: "serving",
-			Database: "serving",
+			Host:         "localhost",
+			Port:         3306,
+			User:         "serving",
+			Password:     "serving",
+			Database:     "serving",
+			MaxOpenConns: 25,
+			MaxIdleConns: 10,
 		},
 		InfluxConfig: InfluxConfig{
 			Protocol: "http",

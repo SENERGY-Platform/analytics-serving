@@ -59,3 +59,24 @@ func TestConfigFileSetsPasswords(t *testing.T) {
 		t.Fatalf("passwords not loaded from file: mysql %q, influx %q", cfg.MySQL.Password.Value(), cfg.InfluxConfig.Password.Value())
 	}
 }
+
+// Parallel deletes each take a connection, so the pool needs a ceiling by default.
+func TestConfigLimitsTheMySQLPool(t *testing.T) {
+	cfg, err := New("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MySQL.MaxOpenConns != 25 || cfg.MySQL.MaxIdleConns != 10 {
+		t.Fatalf("default pool limits: open %d, idle %d, want 25 and 10", cfg.MySQL.MaxOpenConns, cfg.MySQL.MaxIdleConns)
+	}
+
+	t.Setenv("MYSQL_MAX_OPEN_CONNS", "40")
+	t.Setenv("MYSQL_MAX_IDLE_CONNS", "5")
+	cfg, err = New("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MySQL.MaxOpenConns != 40 || cfg.MySQL.MaxIdleConns != 5 {
+		t.Fatalf("pool limits from env: open %d, idle %d, want 40 and 5", cfg.MySQL.MaxOpenConns, cfg.MySQL.MaxIdleConns)
+	}
+}

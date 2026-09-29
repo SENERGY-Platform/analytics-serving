@@ -48,11 +48,14 @@ func TestDeleteInstancesForUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	util.InitStructLogger("warn")
-	err = db.Init(&config.MySQLConfig{Host: dbIp, Port: 3306, User: "usr", Password: "pw", Database: "exports"})
+	err = db.Init(&config.MySQLConfig{Host: dbIp, Port: 3306, User: "usr", Password: "pw", Database: "exports", MaxOpenConns: 8, MaxIdleConns: 4})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	if got := db.GetDB().DB().Stats().MaxOpenConnections; got != 8 {
+		t.Fatalf("pool max open connections = %d, want 8 from the config", got)
+	}
 	db.NewMigration(db.GetDB(), "").Migrate()
 
 	permV2, err := client.NewTestClient(ctx)
