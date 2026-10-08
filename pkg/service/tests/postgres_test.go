@@ -19,6 +19,8 @@ package tests
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -32,6 +34,7 @@ import (
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/SENERGY-Platform/permissions-v2/pkg/client"
 	"github.com/SENERGY-Platform/permissions-v2/pkg/model"
+	"github.com/google/uuid"
 )
 
 func startPostgres(t *testing.T, ctx context.Context, wg *sync.WaitGroup) config.PostgresConfig {
@@ -269,5 +272,138 @@ func TestSearchIgnoresCase(t *testing.T) {
 	}
 	if values != 0 {
 		t.Errorf("%d values left after deleting their instance", values)
+	}
+}
+
+// A new or emptied database must not make the cleanup drop every export permission, including shares with
+// groups and roles that nothing could restore.
+func TestCleanupKeepsPermissionsOfEmptyDatabase(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cfg := startPostgres(t, ctx, wg)
+	if err := db.Init(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := db.NewMigration(db.GetDB(), "").Migrate(); err != nil {
+		t.Fatal(err)
+	}
+
+	permV2, err := client.NewTestClient(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err, _ = permV2.SetTopic(client.InternalAdminToken, client.Topic{Id: service.ExportInstancePermissionsTopic})
+	if err != nil {
+		t.Fatal(err)
+	}
+	shared := client.ResourcePermissions{
+		UserPermissions:  map[string]model.PermissionsMap{TestTokenUser: {Read: true, Write: true, Execute: true, Administrate: true}},
+		GroupPermissions: map[string]model.PermissionsMap{"group1": {Read: true}},
+		RolePermissions:  map[string]model.PermissionsMap{"role1": {Read: true, Execute: true}},
+	}
+	for _, id := range []string{"export-a", "export-b"} {
+		if _, err, _ = permV2.SetPermission(client.InternalAdminToken, service.ExportInstancePermissionsTopic, id, shared); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// NewServing runs the startup cleanup; the second call is what the cron job runs.
+	serving, err := service.NewServing(mocks.Driver{}, mocks.Influx{}, mocks.Pipeline{}, mocks.Imports{}, "", permV2, "", time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = serving.ExportInstanceCleanup(time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, id := range []string{"export-a", "export-b"} {
+		resource, err, _ := permV2.GetResource(client.InternalAdminToken, service.ExportInstancePermissionsTopic, id)
+		if err != nil {
+			t.Errorf("%s: %v", id, err)
+			continue
+		}
+		if len(resource.GroupPermissions) != 1 || len(resource.RolePermissions) != 1 || len(resource.UserPermissions) != 1 {
+			t.Errorf("%s: permissions changed to %+v", id, resource.ResourcePermissions)
+		}
+	}
+}
+
+// Paging through rows with equal sort values must return every row exactly once.
+func TestPagingIsStable(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cfg := startPostgres(t, ctx, wg)
+	if err := db.Init(&cfg); err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := db.NewMigration(db.GetDB(), "").Migrate(); err != nil {
+		t.Fatal(err)
+	}
+
+	const rows = 40
+	for i := range rows {
+		database := lib.ExportDatabase{ID: fmt.Sprintf("db-%02d", (i*17)%rows), Name: "same", Type: "same", Public: true}
+		if err := db.GetDB().Create(&database).Error; err != nil {
+			t.Fatal(err)
+		}
+		instance := lib.Instance{ID: uuid.New(), Name: "same", FilterType: "same", ExportDatabaseID: database.ID}
+		if err := db.GetDB().Create(&instance).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	serving, err := service.NewServing(mocks.Driver{}, mocks.Influx{}, mocks.Pipeline{}, mocks.Imports{}, "", nil, "", time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const pageSize = 3
+	for _, order := range []string{"filter_type:asc", "name:desc", ""} {
+		seenInstances := map[string]int{}
+		seenDatabases := map[string]int{}
+		for offset := 0; offset < rows; offset += pageSize {
+			args := map[string][]string{"limit": {strconv.Itoa(pageSize)}, "offset": {strconv.Itoa(offset)}}
+			if order != "" {
+				args["order"] = []string{order}
+			}
+			instances, _, errs := serving.GetInstances("", args, true, "")
+			if len(errs) > 0 {
+				t.Fatal(order, errs)
+			}
+			for _, instance := range instances {
+				seenInstances[instance.ID.String()]++
+			}
+			if order == "name:desc" {
+				databases, errs := serving.GetExportDatabases("", args)
+				if len(errs) > 0 {
+					t.Fatal(order, errs)
+				}
+				for _, database := range databases {
+					seenDatabases[database.ID]++
+				}
+			}
+		}
+		checkOnce(t, "instances ordered by "+order, seenInstances, rows)
+		if order == "name:desc" {
+			checkOnce(t, "export databases ordered by "+order, seenDatabases, rows)
+		}
+	}
+}
+
+func checkOnce(t *testing.T, what string, seen map[string]int, want int) {
+	t.Helper()
+	repeated := 0
+	for _, n := range seen {
+		if n > 1 {
+			repeated++
+		}
+	}
+	if len(seen) != want || repeated > 0 {
+		t.Errorf("%s: %d of %d rows seen, %d of them more than once", what, len(seen), want, repeated)
 	}
 }

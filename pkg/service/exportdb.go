@@ -41,9 +41,6 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 		if arg == "offset" {
 			tx = tx.Offset(value[0])
 		}
-		if arg == "order" && hasOrder {
-			tx = tx.Order(order.clause(DB))
-		}
 		if arg == "search" {
 			search := strings.SplitN(value[0], ":", 2)
 			if len(search) > 1 {
@@ -72,6 +69,9 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 				tx = tx.Where("user_id != ?", userId)
 			}
 		}
+	}
+	for _, o := range pageOrder(args, order, hasOrder) {
+		tx = tx.Order(o.clause(DB))
 	}
 	errs = tx.Find(&databases).GetErrors()
 	if len(errs) > 0 {

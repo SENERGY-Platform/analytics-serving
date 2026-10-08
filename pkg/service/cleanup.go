@@ -33,9 +33,16 @@ import (
 func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 	if f.permissionsV2 != nil {
 		util.Logger.Info("start exporting instance permissions cleanup")
-		missingInPerm, missingInDb, err := f.findInconsistentExportInstanceIds()
+		missingInPerm, missingInDb, permCount, dbCount, err := f.findInconsistentExportInstanceIds()
 		if err != nil {
 			return err
+		}
+		// An empty database beside existing permissions points to a new or wrong database rather than deleted
+		// exports, and removing the permissions would lose group and role shares that cannot be rebuilt.
+		if dbCount == 0 && permCount > 0 {
+			util.Logger.Warn("skip export instance permissions cleanup: the database holds no instances, but permissions-v2 lists some",
+				"db_instances", dbCount, "permission_resources", permCount)
+			return nil
 		}
 
 		allIds := []string{}
@@ -106,7 +113,8 @@ func (f *Serving) ExportInstanceCleanup(recheckWait time.Duration) error {
 	return nil
 }
 
-func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, missingInDb []string, err error) {
+// findInconsistentExportInstanceIds also returns how many ids permissions-v2 and the database hold in total.
+func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, missingInDb []string, permCount int, dbCount int, err error) {
 	if f.permissionsV2 != nil {
 		done := false
 		option := permV2Client.ListOptions{Limit: 100}
@@ -159,9 +167,11 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 				return false, nil
 			}()
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, 0, 0, err
 			}
 		}
+
+		permCount = len(knownPermIds)
 
 		//loop db ids
 		done = false
@@ -186,6 +196,7 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 						missingInPerm = append(missingInPerm, id)
 					}
 					count++
+					dbCount++
 				}
 				err = rows.Err()
 				if err != nil {
@@ -198,13 +209,13 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 				return false, nil
 			}()
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, 0, 0, err
 			}
 
 		}
 	}
 
-	return missingInPerm, missingInDb, nil
+	return missingInPerm, missingInDb, permCount, dbCount, nil
 }
 
 func (f *Serving) checkPermConsistency(permIdsMap map[string]bool, id string) (consistent bool, err error) {

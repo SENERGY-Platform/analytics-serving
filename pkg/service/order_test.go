@@ -18,6 +18,7 @@ package service
 
 import (
 	"errors"
+	"slices"
 	"testing"
 )
 
@@ -95,5 +96,30 @@ func assertQueryError(t *testing.T, value string, list func() []error) {
 	var queryErr *QueryError
 	if len(errs) != 1 || !errors.As(errs[0], &queryErr) || queryErr.Parameter != "order" {
 		t.Errorf("order %q: got %v, want one QueryError for order", value, errs)
+	}
+}
+
+func TestPageOrder(t *testing.T) {
+	id := order{"id", "asc"}
+	filterType := order{"filter_type", "desc"}
+	cases := []struct {
+		name     string
+		args     map[string][]string
+		o        order
+		hasOrder bool
+		want     []order
+	}{
+		{"no order, not paged", map[string][]string{}, order{}, false, nil},
+		{"order, not paged", map[string][]string{"order": {"filter_type:desc"}}, filterType, true, []order{filterType}},
+		{"order and limit", map[string][]string{"order": {"filter_type:desc"}, "limit": {"10"}}, filterType, true, []order{filterType, id}},
+		{"order and offset", map[string][]string{"order": {"filter_type:desc"}, "offset": {"10"}}, filterType, true, []order{filterType, id}},
+		{"limit without order", map[string][]string{"limit": {"10"}}, order{}, false, []order{id}},
+		{"offset without order", map[string][]string{"offset": {"10"}}, order{}, false, []order{id}},
+		{"paged by id already", map[string][]string{"limit": {"10"}}, order{"id", "desc"}, true, []order{{"id", "desc"}}},
+	}
+	for _, c := range cases {
+		if got := pageOrder(c.args, c.o, c.hasOrder); !slices.Equal(got, c.want) {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
 	}
 }

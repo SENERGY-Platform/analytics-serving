@@ -72,6 +72,21 @@ func parseOrderArg(args map[string][]string, allowed []string) (o order, ok bool
 	return o, err == nil, err
 }
 
+// pageOrder returns the ORDER BY terms of a list request. A paged request ends with the primary key, because rows
+// with equal sort values can otherwise repeat or go missing between pages.
+func pageOrder(args map[string][]string, o order, hasOrder bool) []order {
+	var orders []order
+	if hasOrder {
+		orders = append(orders, o)
+	}
+	_, limit := args["limit"]
+	_, offset := args["offset"]
+	if (limit || offset) && !(hasOrder && o.column == "id") {
+		orders = append(orders, order{column: "id", direction: "asc"})
+	}
+	return orders
+}
+
 // clause quotes the column, because some allowed names such as offset are reserved words.
 func (o order) clause(db *gorm.DB) string {
 	return db.Dialect().Quote(o.column) + " " + o.direction

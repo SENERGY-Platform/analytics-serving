@@ -275,9 +275,6 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 		if arg == "offset" {
 			tx = tx.Offset(value[0])
 		}
-		if arg == "order" && hasOrder {
-			tx = tx.Order(order.clause(DB))
-		}
 		if arg == "search" {
 			search := strings.SplitN(value[0], ":", 2)
 			if len(search) > 1 {
@@ -311,6 +308,9 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 				countTx = countTx.Where("export_database_id IN (?)", DB.Table("export_databases").Select("id").Where("deployment = ? AND (public = TRUE OR user_id = ?)", "internal", userId).SubQuery())
 			}
 		}
+	}
+	for _, o := range pageOrder(args, order, hasOrder) {
+		tx = tx.Order(o.clause(DB))
 	}
 	errors = tx.Preload("Values").Preload("ExportDatabase").Find(&instances).GetErrors()
 	countTx.Find(&lib.Instances{}).Count(&total)
