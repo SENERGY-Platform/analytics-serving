@@ -28,6 +28,10 @@ import (
 )
 
 func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (databases []lib.ExportDatabase, errs []error) {
+	order, hasOrder, err := parseOrderArg(args, exportDatabaseOrderColumns)
+	if err != nil {
+		return databases, []error{err}
+	}
 	DB := db.DB
 	tx := DB.Select("*").Where("public = TRUE OR user_id = ?", userId)
 	for arg, value := range args {
@@ -37,9 +41,8 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 		if arg == "offset" {
 			tx = tx.Offset(value[0])
 		}
-		if arg == "order" {
-			order := strings.SplitN(value[0], ":", 2)
-			tx = tx.Order(order[0] + " " + order[1])
+		if arg == "order" && hasOrder {
+			tx = tx.Order(order.clause(DB))
 		}
 		if arg == "search" {
 			search := strings.SplitN(value[0], ":", 2)

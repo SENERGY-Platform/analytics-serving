@@ -37,6 +37,21 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "error data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error"
                     }
@@ -165,11 +180,17 @@
                         }
                     },
                     "400": {
-                        "description": "error message",
+                        "description": "error data",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "string"
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
                             }
                         }
                     },
@@ -494,6 +515,21 @@
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/lib.Instance"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
                             }
                         }
                     },

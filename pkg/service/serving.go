@@ -246,6 +246,10 @@ func (f *Serving) GetInstancesForUser(userId string, args map[string][]string, t
 }
 
 func (f *Serving) GetInstances(userId string, args map[string][]string, admin bool, token string) (instances lib.Instances, total int64, errors []error) {
+	order, hasOrder, err := parseOrderArg(args, instanceOrderColumns)
+	if err != nil {
+		return instances, total, []error{err}
+	}
 	DB := db.DB
 	tx := DB.Select("*")
 	countTx := DB
@@ -271,9 +275,8 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 		if arg == "offset" {
 			tx = tx.Offset(value[0])
 		}
-		if arg == "order" {
-			order := strings.SplitN(value[0], ":", 2)
-			tx = tx.Order(order[0] + " " + order[1])
+		if arg == "order" && hasOrder {
+			tx = tx.Order(order.clause(DB))
 		}
 		if arg == "search" {
 			search := strings.SplitN(value[0], ":", 2)

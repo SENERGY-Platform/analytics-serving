@@ -719,6 +719,90 @@ func TestPermissionsV2Handling(t *testing.T) {
 		}
 	})
 
+	t.Run("list ordered", func(t *testing.T) {
+		listIds := func(t *testing.T, order string) []string {
+			t.Helper()
+			req, err := http.NewRequest(http.MethodGet, "http://localhost:"+serverPort+"/instance?order="+url.QueryEscape(order), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			instances, err, _ := doReq[lib.InstancesResponse](TestToken, req)
+			if err != nil {
+				t.Fatal(order, err)
+			}
+			ids := []string{}
+			for _, instance := range instances.Instances {
+				ids = append(ids, instance.ID.String())
+			}
+			return ids
+		}
+		if ids := listIds(t, "name:asc"); !reflect.DeepEqual(ids, []string{exportInstance1.ID.String(), exportInstance2.ID.String()}) {
+			t.Error("name:asc", ids)
+		}
+		if ids := listIds(t, "name:DESC"); !reflect.DeepEqual(ids, []string{exportInstance2.ID.String(), exportInstance1.ID.String()}) {
+			t.Error("name:DESC", ids)
+		}
+		// reserved words in MySQL or PostgreSQL, so the column must be quoted
+		for _, order := range []string{"database:asc", "offset:desc"} {
+			if ids := listIds(t, order); len(ids) != 2 {
+				t.Error(order, ids)
+			}
+		}
+
+		req, err := http.NewRequest(http.MethodGet, "http://localhost:"+serverPort+"/databases?order=name:desc", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		databases, err, _ := doReq[[]lib.ExportDatabase](TestToken, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		names := []string{}
+		for _, database := range databases {
+			names = append(names, database.Name)
+		}
+		if !reflect.DeepEqual(names, []string{"testdb", "public"}) {
+			t.Error("databases name:desc", names)
+		}
+	})
+
+	t.Run("list with invalid order", func(t *testing.T) {
+		for _, path := range []string{"/instance", "/admin/instance", "/databases"} {
+			for _, order := range []string{"name;DROP TABLE x:asc", "name:asc;DROP TABLE x", "name"} {
+				req, err := http.NewRequest(http.MethodGet, "http://localhost:"+serverPort+path+"?order="+url.QueryEscape(order), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				body, err, code := doReq[map[string]map[string][]string](client.InternalAdminToken, req)
+				if code != http.StatusBadRequest {
+					t.Errorf("%s order %q: status %d, want 400: %v", path, order, code, err)
+					continue
+				}
+				if err == nil {
+					t.Errorf("%s order %q: no error for status 400: %v", path, order, body)
+				}
+			}
+		}
+		// the 400 body has the shape of the other validation errors
+		req, err := http.NewRequest(http.MethodGet, "http://localhost:"+serverPort+"/instance?order=name", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", TestToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var body map[string]map[string][]string
+		if err = json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if len(body["validationErrors"]["order"]) != 1 {
+			t.Errorf("400 body %v, want validationErrors.order", body)
+		}
+	})
+
 	t.Run("get", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, "http://localhost:"+serverPort+"/instance/"+url.PathEscape(exportInstance1.ID.String()), nil)
 		if err != nil {

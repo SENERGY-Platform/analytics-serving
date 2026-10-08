@@ -147,6 +147,7 @@ func getServingInstance(serv *service.Serving) (string, string, gin.HandlerFunc)
 // @Param export_database_id query string false "export_database_id"
 // @Param internal_only query string false "internal_only"
 // @Success	200 {array} lib.Instance "exports"
+// @Failure	400 {object} map[string]map[string][]string "error data"
 // @Failure	500
 // @Router /instance [get]
 func getServingInstances(serv *service.Serving) (string, string, gin.HandlerFunc) {
@@ -154,6 +155,9 @@ func getServingInstances(serv *service.Serving) (string, string, gin.HandlerFunc
 		args := c.Request.URL.Query()
 		instances, total, errs := serv.GetInstancesForUser(c.GetString(UserIdKey), args, c.GetHeader("Authorization"))
 		if len(errs) > 0 {
+			if respondQueryError(c, errs) {
+				return
+			}
 			util.Logger.Error("could not get serving instances", "error", errs)
 			_ = c.Error(errors.New(MessageSomethingWrong))
 			return
@@ -244,6 +248,7 @@ func deleteServingInstances(serv *service.Serving) (string, string, gin.HandlerF
 // @Produce	json
 // @Security Bearer
 // @Success	200 {array} lib.Instance "exports"
+// @Failure	400 {object} map[string]map[string][]string "error data"
 // @Failure	500
 // @Router /admin/instance [get]
 func getServingInstancesAdmin(serv *service.Serving) (string, string, gin.HandlerFunc) {
@@ -251,6 +256,9 @@ func getServingInstancesAdmin(serv *service.Serving) (string, string, gin.Handle
 		args := c.Request.URL.Query()
 		instances, _, errs := serv.GetInstances(c.GetString(UserIdKey), args, true, c.GetHeader("Authorization"))
 		if len(errs) > 0 {
+			if respondQueryError(c, errs) {
+				return
+			}
 			util.Logger.Error("could not get serving instances for admin", "error", errs)
 			_ = c.Error(errors.New(MessageSomethingWrong))
 			return
@@ -303,7 +311,7 @@ func deleteServingInstanceAdmin(serv *service.Serving) (string, string, gin.Hand
 // @Param deployment query string false "deployment"
 // @Param owner query string false "owner"
 // @Success	200 {array} lib.ExportDatabase "databases"
-// @Failure	400 {object} map[string]string "error message"
+// @Failure	400 {object} map[string]map[string][]string "error data"
 // @Failure	500 {object} map[string]string "error message"
 // @Router /databases [get]
 func getExportDatabases(serv *service.Serving) (string, string, gin.HandlerFunc) {
@@ -311,6 +319,9 @@ func getExportDatabases(serv *service.Serving) (string, string, gin.HandlerFunc)
 		args := c.Request.URL.Query()
 		databases, errs := serv.GetExportDatabases(c.GetString(UserIdKey), args)
 		if len(errs) > 0 {
+			if respondQueryError(c, errs) {
+				return
+			}
 			util.Logger.Error("could not get export databases", "error", errs)
 			_ = c.Error(errors.New(MessageSomethingWrong))
 			return
@@ -462,6 +473,18 @@ func deleteExportDatabase(serv *service.Serving) (string, string, gin.HandlerFun
 		}
 		c.Status(http.StatusOK)
 	}
+}
+
+// respondQueryError answers 400 in the shape of the body validation errors if a query parameter could not be applied.
+func respondQueryError(c *gin.Context, errs []error) bool {
+	for _, err := range errs {
+		var queryErr *service.QueryError
+		if errors.As(err, &queryErr) {
+			c.JSON(http.StatusBadRequest, map[string]map[string][]string{"validationErrors": {queryErr.Parameter: {queryErr.Message}}})
+			return true
+		}
+	}
+	return false
 }
 
 func getHealthCheckH(_ *service.Serving) (string, string, gin.HandlerFunc) {
