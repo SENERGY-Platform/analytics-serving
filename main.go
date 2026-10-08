@@ -68,14 +68,16 @@ func main() {
 	util.Logger.Info(srvInfoHdl.Name(), "version", srvInfoHdl.Version())
 	util.Logger.Info("config: " + sb_util.ToJsonStr(cfg))
 
-	err = db.Init(&cfg.MySQL)
+	err = db.Init(&cfg.Postgres)
 	if err != nil {
 		util.Logger.Error("failed to connect to database", "error", err)
 		ec = 1
 		return
 	}
 	m := db.NewMigration(db.GetDB(), cfg.MigrationInfo)
-	m.Migrate()
+	if err = m.Migrate(); err != nil {
+		util.Logger.Error("failed to migrate the schema", "error", err)
+	}
 	err = m.TmpMigrate()
 	if err != nil {
 		util.Logger.Error("failed to migrate", "error", err)

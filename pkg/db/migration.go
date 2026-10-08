@@ -35,24 +35,43 @@ func NewMigration(db *gorm.DB, migrationInfo string) *Migration {
 	return &Migration{db: db, migrationInfo: migrationInfo}
 }
 
-func (m *Migration) Migrate() {
-	if !DB.HasTable("instances") {
-		util.Logger.Debug("Creating instances table.")
-		DB.CreateTable(&lib.Instance{})
-	}
-	DB.AutoMigrate(&lib.Instance{})
-	DB.Model(&lib.Instance{}).AddForeignKey("export_database_id", "export_databases(id)", "RESTRICT", "CASCADE")
-	if !DB.HasTable("values") {
-		util.Logger.Debug("Creating values table.")
-		DB.CreateTable(&lib.Value{})
-	}
-	DB.AutoMigrate(&lib.Value{})
-	DB.Model(&lib.Value{}).AddForeignKey("instance_id", "instances(id)", "CASCADE", "CASCADE")
+// Migrate creates or extends the tables and their foreign keys. Referenced tables come first, since a foreign key
+// to a missing table cannot be created.
+func (m *Migration) Migrate() error {
+	var errs []error
 	if !DB.HasTable("export_databases") {
 		util.Logger.Debug("Creating export_databases table.")
-		DB.CreateTable(&lib.ExportDatabase{})
+		errs = append(errs, DB.CreateTable(&lib.ExportDatabase{}).Error)
 	}
-	DB.AutoMigrate(&lib.ExportDatabase{})
+	errs = append(errs, DB.AutoMigrate(&lib.ExportDatabase{}).Error)
+	if !DB.HasTable("instances") {
+		util.Logger.Debug("Creating instances table.")
+		errs = append(errs, DB.CreateTable(&lib.Instance{}).Error)
+	}
+	errs = append(errs, DB.AutoMigrate(&lib.Instance{}).Error)
+	errs = append(errs, addForeignKey(&lib.Instance{}, "export_database_id", "export_databases(id)", "RESTRICT", "CASCADE"))
+	if !DB.HasTable("values") {
+		util.Logger.Debug("Creating values table.")
+		errs = append(errs, DB.CreateTable(&lib.Value{}).Error)
+	}
+	errs = append(errs, DB.AutoMigrate(&lib.Value{}).Error)
+	errs = append(errs, addForeignKey(&lib.Value{}, "instance_id", "instances(id)", "CASCADE", "CASCADE"))
+	return errors.Join(errs...)
+}
+
+// addForeignKey relies on gorm skipping an existing constraint. A failure is checked again, because another
+// instance starting at the same time can add the constraint between that check and the ALTER TABLE.
+func addForeignKey(model interface{}, field string, dest string, onDelete string, onUpdate string) error {
+	err := DB.Model(model).AddForeignKey(field, dest, onDelete, onUpdate).Error
+	if err != nil && hasForeignKey(DB.NewScope(model).TableName(), field, dest) {
+		return nil
+	}
+	return err
+}
+
+func hasForeignKey(table string, field string, dest string) bool {
+	dialect := DB.Dialect()
+	return dialect.HasForeignKey(table, dialect.BuildKeyName(table, field, dest, "foreign"))
 }
 
 type MigrationInfo struct {

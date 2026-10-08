@@ -19,20 +19,20 @@ package db
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/SENERGY-Platform/analytics-serving/pkg/config"
 	"github.com/SENERGY-Platform/analytics-serving/pkg/util"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 var DB *gorm.DB
 
-func Init(config *config.MySQLConfig) (err error) {
-	address := "(" + config.Host + ":" + strconv.Itoa(config.Port) + ")/" + config.Database
-	connectionString := config.User + ":" + config.Password.Value() + "@" + address + "?charset=utf8&parseTime=True&loc=Local"
+func Init(config *config.PostgresConfig) (err error) {
+	address := config.Host + ":" + strconv.Itoa(config.Port) + "/" + config.Database
 	util.Logger.Info(fmt.Sprintf("connecting to %s as %s", address, config.User))
-	db, err := gorm.Open("mysql", connectionString)
+	db, err := gorm.Open("postgres", connectionString(config))
 	if err != nil {
 		return
 	} else {
@@ -40,10 +40,19 @@ func Init(config *config.MySQLConfig) (err error) {
 	}
 	db.DB().SetMaxOpenConns(config.MaxOpenConns)
 	db.DB().SetMaxIdleConns(config.MaxIdleConns)
-	db.Set("gorm:table_options", "ENGINE=InnoDB")
 	db.LogMode(false)
 	DB = db
 	return
+}
+
+// connectionString quotes every value, since an unquoted password or name with a space, quote or backslash
+// would be cut off or unescaped by the key=value parser of lib/pq.
+func connectionString(config *config.PostgresConfig) string {
+	quote := func(value string) string {
+		return "'" + strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(value) + "'"
+	}
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		quote(config.Host), config.Port, quote(config.User), quote(config.Password.Value()), quote(config.Database))
 }
 
 func Close() (err error) {

@@ -19,30 +19,38 @@ package docker
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"sync"
 	"time"
 
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func MySqlWithNetwork(ctx context.Context, wg *sync.WaitGroup, dbname string) (conStr string, ip string, port string, err error) {
-	log.Println("start mysql container")
+const (
+	PostgresPort = 5432
+	PostgresUser = "usr"
+	// PostgresPassword contains a space, a quote and a backslash, so every test that connects checks the escaping
+	// of the connection string.
+	PostgresPassword = `p w'\x`
+)
+
+func PostgresWithNetwork(ctx context.Context, wg *sync.WaitGroup, dbname string) (conStr string, ip string, port string, err error) {
+	log.Println("start postgres container")
 	c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
-			Image: "mysql:5.7",
+			Image: "postgres:18",
 			Env: map[string]string{
-				"MYSQL_ROOT_PASSWORD": "pw",
-				"MYSQL_DATABASE":      dbname,
-				"MYSQL_PASSWORD":      "pw",
-				"MYSQL_USER":          "usr",
+				"POSTGRES_DB":       dbname,
+				"POSTGRES_USER":     PostgresUser,
+				"POSTGRES_PASSWORD": PostgresPassword,
 			},
-			ExposedPorts: []string{"3306/tcp"},
+			ExposedPorts: []string{"5432/tcp"},
 			WaitingFor: wait.ForAll(
-				wait.ForListeningPort("3306/tcp"),
+				wait.ForListeningPort("5432/tcp"),
 			),
 		},
 		Started: true,
@@ -55,31 +63,34 @@ func MySqlWithNetwork(ctx context.Context, wg *sync.WaitGroup, dbname string) (c
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
-		log.Println("DEBUG: remove mysql container", c.Terminate(context.Background()))
+		log.Println("DEBUG: remove postgres container", c.Terminate(context.Background()))
 	}()
 
 	ip, err = c.ContainerIP(ctx)
 	if err != nil {
 		return "", "", "", err
 	}
-	temp, err := c.MappedPort(ctx, "3306/tcp")
+	temp, err := c.MappedPort(ctx, "5432/tcp")
 	if err != nil {
 		return "", "", "", err
 	}
 	port = temp.Port()
-	conStr = fmt.Sprintf("usr:pw@(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", ip, "3306", dbname)
+	conStr = (&url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(PostgresUser, PostgresPassword),
+		Host:     net.JoinHostPort(ip, "5432"),
+		Path:     "/" + dbname,
+		RawQuery: "sslmode=disable",
+	}).String()
 
 	err = retry(1*time.Minute, func() error {
-		log.Println("try mysql conn", conStr)
-		db, err := sql.Open("mysql", conStr)
+		log.Println("try postgres conn", ip)
+		db, err := sql.Open("postgres", conStr)
 		if err != nil {
 			return err
 		}
-		err = db.Ping()
-		if err != nil {
-			return err
-		}
-		return nil
+		defer db.Close()
+		return db.Ping()
 	})
 	if err != nil {
 		log.Println("ERROR:", err)

@@ -21,15 +21,16 @@ import (
 	sb_config_types "github.com/SENERGY-Platform/go-service-base/config-hdl/types"
 )
 
-type MySQLConfig struct {
-	Host     string                 `json:"host" env_var:"MYSQL_HOST"`
-	Port     int                    `json:"port" env_var:"MYSQL_PORT"`
-	User     string                 `json:"user" env_var:"MYSQL_USER"`
-	Password sb_config_types.Secret `json:"password" env_var:"MYSQL_PW"`
-	Database string                 `json:"database" env_var:"MYSQL_DB"`
+type PostgresConfig struct {
+	Host string `json:"host" env_var:"POSTGRES_HOST"`
+	Port int    `json:"port" env_var:"POSTGRES_PORT"`
+	// PG_USER and PG_PASSWORD are the keys of the platform's postgres-credentials Secret.
+	User     string                 `json:"user" env_var:"PG_USER"`
+	Password sb_config_types.Secret `json:"password" env_var:"PG_PASSWORD"`
+	Database string                 `json:"database" env_var:"POSTGRES_DB"`
 	// Pool limits as in database/sql: MaxOpenConns 0 is unlimited, MaxIdleConns 0 keeps no idle connection.
-	MaxOpenConns int `json:"max_open_conns" env_var:"MYSQL_MAX_OPEN_CONNS"`
-	MaxIdleConns int `json:"max_idle_conns" env_var:"MYSQL_MAX_IDLE_CONNS"`
+	MaxOpenConns int `json:"max_open_conns" env_var:"POSTGRES_MAX_OPEN_CONNS"`
+	MaxIdleConns int `json:"max_idle_conns" env_var:"POSTGRES_MAX_IDLE_CONNS"`
 }
 
 type InfluxConfig struct {
@@ -55,21 +56,21 @@ type KafkaConfig struct {
 }
 
 type Config struct {
-	Logger                 LoggerConfig  `json:"logger" env_var:"LOGGER_CONFIG"`
-	URLPrefix              string        `json:"url_prefix" env_var:"URL_PREFIX"`
-	ServerPort             int           `json:"server_port" env_var:"SERVER_PORT"`
-	Debug                  bool          `json:"debug" env_var:"DEBUG"`
-	Driver                 string        `json:"driver" env_var:"DRIVER"`
-	MySQL                  MySQLConfig   `json:"mysql" env_var:"MYSQL_CONFIG"`
-	MigrationInfo          string        `json:"migration_info" env_var:"MIGRATION_INFO"`
-	Kafka                  KafkaConfig   `json:"kafka" env_var:"KAFKA_CONFIG"`
-	PermissionV2Url        string        `json:"permission_v2_url" env_var:"PERMISSION_V2_URL"`
-	PipelineApiUrl         string        `json:"pipeline_api_url" env_var:"PIPELINE_API_ENDPOINT"`
-	ImportDeployApiUrl     string        `json:"import_deploy_api_url" env_var:"IMPORT_DEPLOY_API_ENDPOINT"`
-	ExportDatabaseIdPrefix string        `json:"export_database_id_prefix" env_var:"EXPORT_DATABASE_ID_PREFIX"`
-	CleanupConfig          CleanupConfig `json:"cleanup_config" env_var:"CLEANUP_CONFIG"`
-	InfluxConfig           InfluxConfig  `json:"influx_config" env_var:"INFLUX_CONFIG"`
-	ApiDocsProviderBaseUrl string        `json:"api_docs_provider_base_url" env_var:"API_DOCS_PROVIDER_BASE_URL"`
+	Logger                 LoggerConfig   `json:"logger" env_var:"LOGGER_CONFIG"`
+	URLPrefix              string         `json:"url_prefix" env_var:"URL_PREFIX"`
+	ServerPort             int            `json:"server_port" env_var:"SERVER_PORT"`
+	Debug                  bool           `json:"debug" env_var:"DEBUG"`
+	Driver                 string         `json:"driver" env_var:"DRIVER"`
+	Postgres               PostgresConfig `json:"postgres" env_var:"POSTGRES_CONFIG"`
+	MigrationInfo          string         `json:"migration_info" env_var:"MIGRATION_INFO"`
+	Kafka                  KafkaConfig    `json:"kafka" env_var:"KAFKA_CONFIG"`
+	PermissionV2Url        string         `json:"permission_v2_url" env_var:"PERMISSION_V2_URL"`
+	PipelineApiUrl         string         `json:"pipeline_api_url" env_var:"PIPELINE_API_ENDPOINT"`
+	ImportDeployApiUrl     string         `json:"import_deploy_api_url" env_var:"IMPORT_DEPLOY_API_ENDPOINT"`
+	ExportDatabaseIdPrefix string         `json:"export_database_id_prefix" env_var:"EXPORT_DATABASE_ID_PREFIX"`
+	CleanupConfig          CleanupConfig  `json:"cleanup_config" env_var:"CLEANUP_CONFIG"`
+	InfluxConfig           InfluxConfig   `json:"influx_config" env_var:"INFLUX_CONFIG"`
+	ApiDocsProviderBaseUrl string         `json:"api_docs_provider_base_url" env_var:"API_DOCS_PROVIDER_BASE_URL"`
 }
 
 func New(path string) (*Config, error) {
@@ -78,9 +79,9 @@ func New(path string) (*Config, error) {
 		URLPrefix:  "",
 		Debug:      false,
 		Driver:     "ew",
-		MySQL: MySQLConfig{
+		Postgres: PostgresConfig{
 			Host:         "localhost",
-			Port:         3306,
+			Port:         5432,
 			User:         "serving",
 			Password:     "serving",
 			Database:     "serving",

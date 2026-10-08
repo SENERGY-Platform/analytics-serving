@@ -170,7 +170,8 @@ func (f *Serving) findInconsistentExportInstanceIds() (missingInPerm []string, m
 			done, err = func() (bool, error) {
 				f.permMux.Lock()
 				defer f.permMux.Unlock()
-				rows, err := db.DB.Model(&lib.Instance{}).Select("id").Limit(option.Limit).Offset(option.Offset).Rows()
+				// PostgreSQL returns rows in no fixed order without ORDER BY, so pages could overlap or skip ids.
+				rows, err := db.DB.Model(&lib.Instance{}).Select("id").Order("id").Limit(option.Limit).Offset(option.Offset).Rows()
 				if err != nil {
 					return true, err
 				}

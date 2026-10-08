@@ -52,7 +52,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, dbIp, _, err := docker.MySqlWithNetwork(ctx, wg, "exports")
+	_, dbIp, _, err := docker.PostgresWithNetwork(ctx, wg, "exports")
 	if err != nil {
 		t.Error(err)
 		return
@@ -65,10 +65,10 @@ func TestPermissionsV2Handling(t *testing.T) {
 	}
 	serverPort := strconv.Itoa(serverPortInt)
 
-	t.Setenv("MYSQL_USER", "usr")
-	t.Setenv("MYSQL_PW", "pw")
-	t.Setenv("MYSQL_HOST", dbIp)
-	t.Setenv("MYSQL_DB", "exports")
+	t.Setenv("PG_USER", docker.PostgresUser)
+	t.Setenv("PG_PASSWORD", docker.PostgresPassword)
+	t.Setenv("POSTGRES_HOST", dbIp)
+	t.Setenv("POSTGRES_DB", "exports")
 
 	t.Setenv("CLEANUP_WAIT_DURATION", "5s")
 	t.Setenv("CLEANUP_CRON", "0 3 * * *")
@@ -102,9 +102,9 @@ func TestPermissionsV2Handling(t *testing.T) {
 
 	util.InitStructLogger(cfg.Logger.Level)
 
-	err = db.Init(&cfg.MySQL)
+	err = db.Init(&cfg.Postgres)
 	if err != nil {
-		return
+		t.Fatal(err)
 	}
 	defer func() {
 		err = db.Close()
@@ -113,7 +113,9 @@ func TestPermissionsV2Handling(t *testing.T) {
 		}
 	}()
 	m := db.NewMigration(db.GetDB(), cfg.MigrationInfo)
-	m.Migrate()
+	if err = m.Migrate(); err != nil {
+		t.Fatal(err)
+	}
 	err = m.TmpMigrate()
 	if err != nil {
 		t.Error(err)
@@ -742,7 +744,7 @@ func TestPermissionsV2Handling(t *testing.T) {
 		if ids := listIds(t, "name:DESC"); !reflect.DeepEqual(ids, []string{exportInstance2.ID.String(), exportInstance1.ID.String()}) {
 			t.Error("name:DESC", ids)
 		}
-		// reserved words in MySQL or PostgreSQL, so the column must be quoted
+		// offset is a reserved word in PostgreSQL, so the column must be quoted
 		for _, order := range []string{"database:asc", "offset:desc"} {
 			if ids := listIds(t, order); len(ids) != 2 {
 				t.Error(order, ids)

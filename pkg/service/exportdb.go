@@ -49,27 +49,27 @@ func (f *Serving) GetExportDatabases(userId string, args map[string][]string) (d
 			if len(search) > 1 {
 				allowed := []string{"name", "description", "type"}
 				if util.StringInSlice(search[0], allowed) {
-					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
+					tx = tx.Where(search[0]+" ILIKE ?", "%"+search[1]+"%")
 				}
 			} else {
-				tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
+				tx = tx.Where("name ILIKE ?", "%"+value[0]+"%")
 			}
 		}
 		if arg == "deployment" {
-			tx = tx.Where("`deployment` = ?", value[0])
+			tx = tx.Where("deployment = ?", value[0])
 		}
 		if arg == "public" {
 			if value[0] == "true" {
-				tx = tx.Where("`public` = TRUE")
+				tx = tx.Where("public = TRUE")
 			} else {
-				tx = tx.Where("`public` = FALSE")
+				tx = tx.Where("public = FALSE")
 			}
 		}
 		if arg == "owner" {
 			if value[0] == "true" {
-				tx = tx.Where("`user_id` = ?", userId)
+				tx = tx.Where("user_id = ?", userId)
 			} else {
-				tx = tx.Where("`user_id` != ?", userId)
+				tx = tx.Where("user_id != ?", userId)
 			}
 		}
 	}

@@ -1,13 +1,12 @@
 services:
-  mysql:
-    image: mysql:5.7
+  postgres:
+    image: postgres:18
     environment:
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: serving
-      MYSQL_USER: serving
-      MYSQL_PASSWORD: serving
+      POSTGRES_DB: serving
+      POSTGRES_USER: serving
+      POSTGRES_PASSWORD: serving
     ports:
-      - 3306:3306
+      - 5432:5432
   kafka:
     image: bitnamilegacy/kafka:3.6.0-debian-11-r2
     ports:

@@ -283,22 +283,22 @@ func (f *Serving) GetInstances(userId string, args map[string][]string, admin bo
 			if len(search) > 1 {
 				allowed := []string{"name", "description", "entity_name", "service_name"}
 				if util.StringInSlice(search[0], allowed) {
-					tx = tx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
-					countTx = countTx.Where(search[0]+" LIKE ?", "%"+search[1]+"%")
+					tx = tx.Where(search[0]+" ILIKE ?", "%"+search[1]+"%")
+					countTx = countTx.Where(search[0]+" ILIKE ?", "%"+search[1]+"%")
 				}
 			} else {
-				tx = tx.Where("name LIKE ?", "%"+value[0]+"%")
-				countTx = countTx.Where("name LIKE ?", "%"+value[0]+"%")
+				tx = tx.Where("name ILIKE ?", "%"+value[0]+"%")
+				countTx = countTx.Where("name ILIKE ?", "%"+value[0]+"%")
 			}
 
 		}
 		if arg == "generated" {
 			if value[0] == "true" {
-				tx = tx.Where("`generated` = TRUE")
-				countTx = countTx.Where("`generated` = TRUE")
+				tx = tx.Where("generated = TRUE")
+				countTx = countTx.Where("generated = TRUE")
 			} else {
-				tx = tx.Where("`generated` = FALSE")
-				countTx = countTx.Where("`generated` = FALSE")
+				tx = tx.Where("generated = FALSE")
+				countTx = countTx.Where("generated = FALSE")
 			}
 		}
 		if arg == "export_database_id" {
