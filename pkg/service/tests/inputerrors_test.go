@@ -40,15 +40,29 @@ import (
 	"github.com/google/uuid"
 )
 
-// countingDriver counts CreateInstance calls, so a test can show that a rejected request never reached the export worker.
+// countingDriver counts CreateInstance and DeleteInstance calls, so a test can show that a rejected request never
+// reached the export worker.
 type countingDriver struct {
 	mocks.Driver
 	created atomic.Int64
+	deleted atomic.Int64
 }
+
+// nameFailingOnStore makes countingDriver return a service id longer than its varchar(255) column, so that storing the
+// export fails after the driver succeeded; a failing driver would cost the 20 s of the create retries.
+const nameFailingOnStore = "failing on store"
 
 func (d *countingDriver) CreateInstance(instance *lib.Instance, dataFields string, tagFields string) (string, error) {
 	d.created.Add(1)
+	if instance.Name == nameFailingOnStore {
+		return strings.Repeat("x", 256), nil
+	}
 	return d.Driver.CreateInstance(instance, dataFields, tagFields)
+}
+
+func (d *countingDriver) DeleteInstance(instance *lib.Instance) error {
+	d.deleted.Add(1)
+	return d.Driver.DeleteInstance(instance)
 }
 
 // pipelineStub grants every pipeline except "denied" (no access) and "broken" (the check itself fails).
@@ -171,8 +185,8 @@ func TestCallerErrorsOnCreateAndUpdate(t *testing.T) {
 		}
 	}
 
-	// state is the number of stored instances, permission resources of instances and export worker creates.
-	type state struct{ instances, permissions, created int64 }
+	// state is the number of stored instances, permission resources of instances and export worker creates and deletes.
+	type state struct{ instances, permissions, created, deleted int64 }
 	current := func(t *testing.T) state {
 		t.Helper()
 		var instances int64
@@ -183,12 +197,12 @@ func TestCallerErrorsOnCreateAndUpdate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return state{instances: instances, permissions: int64(len(ids)), created: driver.created.Load()}
+		return state{instances: instances, permissions: int64(len(ids)), created: driver.created.Load(), deleted: driver.deleted.Load()}
 	}
 	assertUnchanged := func(t *testing.T, before state) {
 		t.Helper()
 		if after := current(t); after != before {
-			t.Errorf("state changed from %+v to %+v, want nothing created", before, after)
+			t.Errorf("state changed from %+v to %+v, want nothing created or deleted", before, after)
 		}
 	}
 
@@ -344,6 +358,100 @@ func TestCallerErrorsOnCreateAndUpdate(t *testing.T) {
 			assertUnchanged(t, before)
 		})
 	}
+
+	createdInstance := func(t *testing.T, request lib.ServingRequest) lib.Instance {
+		t.Helper()
+		status, raw := create(t, request)
+		if status != http.StatusCreated {
+			t.Fatalf("status %d, body %s, want 201", status, raw)
+		}
+		var instance lib.Instance
+		if err := json.Unmarshal(raw, &instance); err != nil {
+			t.Fatal(err)
+		}
+		return instance
+	}
+	stored := func(t *testing.T, id string) lib.Instance {
+		t.Helper()
+		var instance lib.Instance
+		if errs := db.DB.Where("id = ?", id).Preload("Values").Preload("ExportDatabase").First(&instance).GetErrors(); len(errs) > 0 {
+			t.Fatal(errs)
+		}
+		return instance
+	}
+	update := func(t *testing.T, id string, request lib.ServingRequest) (int, []byte) {
+		t.Helper()
+		return send(t, http.MethodPut, "/instance/"+id, TestToken, request)
+	}
+	// assertStoredUnchanged compares the JSON form, since reflect.DeepEqual would also compare the time zone pointers.
+	assertStoredUnchanged := func(t *testing.T, before lib.Instance) {
+		t.Helper()
+		after := stored(t, before.ID.String())
+		wantJson, err := json.Marshal(before)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotJson, err := json.Marshal(after)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(gotJson, wantJson) {
+			t.Errorf("stored export changed from %s to %s", wantJson, gotJson)
+		}
+	}
+
+	t.Run("update to a timescale database without timestamp format", func(t *testing.T) {
+		request := validRequest()
+		request.ExportDatabaseID, request.TimePath, request.TimestampFormat = timescaleDatabase.ID, "time", "unix"
+		instance := createdInstance(t, request)
+		before, beforeState := stored(t, instance.ID.String()), current(t)
+		request.TimestampFormat = ""
+		status, raw := update(t, instance.ID.String(), request)
+		assertFields(t, validationErrors(t, status, raw), "TimestampFormat")
+		assertUnchanged(t, beforeState)
+		assertStoredUnchanged(t, before)
+	})
+
+	t.Run("update to an unknown export database", func(t *testing.T) {
+		instance := createdInstance(t, validRequest())
+		before, beforeState := stored(t, instance.ID.String()), current(t)
+		request := validRequest()
+		request.ExportDatabaseID = uuid.NewString()
+		status, raw := update(t, instance.ID.String(), request)
+		assertFields(t, validationErrors(t, status, raw), "ExportDatabaseID")
+		assertUnchanged(t, beforeState)
+		assertStoredUnchanged(t, before)
+	})
+
+	t.Run("update that fails to recreate the export", func(t *testing.T) {
+		instance := createdInstance(t, validRequest())
+		request := validRequest()
+		request.Name = nameFailingOnStore
+		if status, raw := update(t, instance.ID.String(), request); status != http.StatusInternalServerError {
+			t.Errorf("status %d, body %s, want 500", status, raw)
+		}
+	})
+
+	t.Run("valid update", func(t *testing.T) {
+		instance := createdInstance(t, validRequest())
+		beforeState := current(t)
+		request := validRequest()
+		request.Name, request.ExportDatabaseID, request.TimePath, request.TimestampFormat = "renamed", timescaleDatabase.ID, "time", "unix"
+		status, raw := update(t, instance.ID.String(), request)
+		if status != http.StatusOK {
+			t.Fatalf("status %d, body %s, want 200", status, raw)
+		}
+		after := stored(t, instance.ID.String())
+		if after.Name != "renamed" || after.ExportDatabaseID != timescaleDatabase.ID || after.TimestampFormat != "unix" {
+			t.Errorf("stored export %+v, want the name, database and timestamp format of the update", after)
+		}
+		want := beforeState
+		want.created++
+		want.deleted++
+		if got := current(t); got != want {
+			t.Errorf("state %+v, want %+v: one delete and one create", got, want)
+		}
+	})
 
 	t.Run("update to a device of another user", func(t *testing.T) {
 		status, raw := create(t, validRequest())

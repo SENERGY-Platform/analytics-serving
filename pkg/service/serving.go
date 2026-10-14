@@ -128,16 +128,7 @@ func (f *Serving) CreateInstance(req lib.ServingRequest, userId string, token st
 	return
 }
 
-func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req lib.ServingRequest, userId string) (instance lib.Instance, err error) {
-	database, errs := f.GetExportDatabase(req.ExportDatabaseID, userId)
-	if len(errs) > 0 {
-		err = errors.New("export-database does not exist or user unauthorized")
-		return
-	}
-	return f.createInstanceForDatabase(id, appId, req, userId, database)
-}
-
-// exportDatabaseForRequest loads the export database of a new export and checks the fields its type requires.
+// exportDatabaseForRequest loads the export database of a created or updated export and checks the fields its type requires.
 func (f *Serving) exportDatabaseForRequest(req lib.ServingRequest, userId string) (database lib.ExportDatabase, err error) {
 	database, errs := f.GetExportDatabase(req.ExportDatabaseID, userId)
 	if len(errs) > 0 {
@@ -213,6 +204,11 @@ func (f *Serving) UpdateInstance(id string, userId string, request lib.ServingRe
 	if len(errors) > 0 {
 		return
 	}
+	// Checked before the export is deleted, so that a request error leaves it in place.
+	database, err := f.exportDatabaseForRequest(request, userId)
+	if err != nil {
+		return instance, []error{err}
+	}
 	uid, _ := uuid.Parse(id)
 	appId := instance.ApplicationId
 	if appId.ID() == 0 {
@@ -224,27 +220,33 @@ func (f *Serving) UpdateInstance(id string, userId string, request lib.ServingRe
 	requestInstance, _, _ := populateInstance(uid, appId, request, userId)
 	requestInstance.RancherServiceId = instance.RancherServiceId
 	requestInstance.CreatedAt = instance.CreatedAt
-	instance = f.update(id, userId, request, requestInstance, uid, appId)
+	instance, err = f.update(id, userId, request, requestInstance, uid, appId, database)
+	if err != nil {
+		errors = append(errors, err)
+	}
 	return
 }
 
-func (f *Serving) update(id string, userId string, request lib.ServingRequest, instance lib.Instance, uid uuid.UUID, appId uuid.UUID) lib.Instance {
+// update deletes the export and creates it anew. A failure after the delete loses the export; it is reported, not undone.
+func (f *Serving) update(id string, userId string, request lib.ServingRequest, instance lib.Instance, uid uuid.UUID, appId uuid.UUID, database lib.ExportDatabase) (lib.Instance, error) {
 	err := util.Retry(5, 5*time.Second, func() (err error) {
 		//we use an empty userId to indicate that the user should not be checked
 		//the check has already been done by UpdateInstance()
 		_, errs := f.deleteInstance(id, "")
-		if len(errs) > 1 {
+		if len(errs) > 0 {
 			err = errs[0]
 		}
 		return err
 	})
 	if err != nil {
-		util.Logger.Error("error on update", "error", err)
-	} else {
-		instance, _ = f.createInstanceWithId(uid, appId, request, userId)
-		util.Logger.Debug("serving - successfully updated export - " + instance.ID.String())
+		return instance, fmt.Errorf("serving - deleting export for update failed: %w", err)
 	}
-	return instance
+	instance, err = f.createInstanceForDatabase(uid, appId, request, userId, database)
+	if err != nil {
+		return instance, fmt.Errorf("serving - recreating export for update failed: %w", err)
+	}
+	util.Logger.Debug("serving - successfully updated export - " + instance.ID.String())
+	return instance, nil
 }
 
 func (f *Serving) GetInstance(id string, userId string, token string, admin bool) (instance lib.Instance, errors []error) {
