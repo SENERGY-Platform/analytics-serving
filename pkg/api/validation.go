@@ -49,17 +49,35 @@ func ValidateInputs(dataSet interface{}) (bool, map[string][]string) {
 
 		for _, err := range err.(validator.ValidationErrors) {
 			util.Logger.Error("Validation error", "error", err.Param())
+			field := fieldPath(err)
 			switch err.Tag() {
 			case "required":
-				errors[err.Field()] = append(errors[err.Field()], "The field '"+err.Field()+"' is required")
+				errors[field] = append(errors[field], "The field '"+field+"' is required")
 				break
 			case "min":
-				errors[err.Field()] = append(errors[err.Field()], "The field '"+err.Field()+"' must be at least have "+err.Param()+" chars")
+				errors[field] = append(errors[field], "The field '"+field+"' must be at least have "+err.Param()+" chars")
 				break
+			case "max":
+				unit := "characters"
+				if err.Kind() != reflect.String {
+					unit = "elements"
+				}
+				errors[field] = append(errors[field], "The field '"+field+"' must not have more than "+err.Param()+" "+unit)
+			case "oneof":
+				errors[field] = append(errors[field], "The field '"+field+"' must be one of: "+strings.Join(strings.Fields(err.Param()), ", "))
 			}
 		}
 		return false, errors
 	}
 
 	return true, nil
+}
+
+// fieldPath names a field by its JSON path below the validated struct, e.g. "Values[0].Name", so that a nested
+// field does not collide with a top-level field of the same name.
+func fieldPath(err validator.FieldError) string {
+	if _, path, found := strings.Cut(err.Namespace(), "."); found {
+		return path
+	}
+	return err.Field()
 }

@@ -92,6 +92,11 @@ func (f *Serving) CreateInstance(req lib.ServingRequest, userId string, token st
 	if !access {
 		return
 	}
+	// Checked before the permission is written, so that a request error leaves nothing to clean up.
+	database, err := f.exportDatabaseForRequest(req, userId)
+	if err != nil {
+		return
+	}
 	id := uuid.New()
 	appId := uuid.New()
 
@@ -112,7 +117,7 @@ func (f *Serving) CreateInstance(req lib.ServingRequest, userId string, token st
 		}
 	}
 
-	instance, err = f.createInstanceWithId(id, appId, req, userId)
+	instance, err = f.createInstanceForDatabase(id, appId, req, userId, database)
 	if err != nil {
 		if f.permissionsV2 != nil {
 			temperr, _ := f.permissionsV2.RemoveResource(permV2Client.InternalAdminToken, ExportInstancePermissionsTopic, id.String())
@@ -129,6 +134,34 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req lib.Se
 		err = errors.New("export-database does not exist or user unauthorized")
 		return
 	}
+	return f.createInstanceForDatabase(id, appId, req, userId, database)
+}
+
+// exportDatabaseForRequest loads the export database of a new export and checks the fields its type requires.
+func (f *Serving) exportDatabaseForRequest(req lib.ServingRequest, userId string) (database lib.ExportDatabase, err error) {
+	database, errs := f.GetExportDatabase(req.ExportDatabaseID, userId)
+	if len(errs) > 0 {
+		for _, e := range errs {
+			if gorm.IsRecordNotFoundError(e) {
+				return database, &InputError{Field: "ExportDatabaseID", Message: "The field 'ExportDatabaseID' must name an export database the user can access"}
+			}
+		}
+		return database, fmt.Errorf("could not load export database: %w", errors.Join(errs...))
+	}
+	if database.Type == exportDatabaseTypeTimescaleDB {
+		var missing []error
+		if req.TimePath == "" {
+			missing = append(missing, &InputError{Field: "TimePath", Message: "The field 'TimePath' is required for a TimescaleDB export database"})
+		}
+		if req.TimestampFormat == "" {
+			missing = append(missing, &InputError{Field: "TimestampFormat", Message: "The field 'TimestampFormat' is required for a TimescaleDB export database"})
+		}
+		err = errors.Join(missing...)
+	}
+	return
+}
+
+func (f *Serving) createInstanceForDatabase(id uuid.UUID, appId uuid.UUID, req lib.ServingRequest, userId string, database lib.ExportDatabase) (instance lib.Instance, err error) {
 	instance, dataFields, tagFields := populateInstance(id, appId, req, userId)
 	instance.ExportDatabase = database
 	err = util.Retry(5, 5*time.Second, func() (err error) {
@@ -142,7 +175,7 @@ func (f *Serving) createInstanceWithId(id uuid.UUID, appId uuid.UUID, req lib.Se
 		return
 	} else {
 		db.DB.NewRecord(instance)
-		errs = db.DB.Create(&instance).GetErrors()
+		errs := db.DB.Create(&instance).GetErrors()
 		if len(errs) > 0 {
 			err2 := util.Retry(5, 5*time.Second, func() (e error) {
 				e = f.driver.DeleteInstance(&instance)
@@ -441,6 +474,8 @@ func (f *Serving) CreateFromInstance(instance *lib.Instance) (err error) {
 	return
 }
 
+// userHasSourceAccess returns access == false only together with an error. A failed check stays a plain error, only
+// a denial wraps ErrSourceAccessDenied.
 func (f *Serving) userHasSourceAccess(req lib.ServingRequest, token string) (access bool, err error) {
 	access = false
 	switch req.FilterType {
@@ -450,7 +485,7 @@ func (f *Serving) userHasSourceAccess(req lib.ServingRequest, token string) (acc
 			return access, e
 		}
 		if !hasAccess {
-			e = errors.New("serving - user does not have the rights to access the devices")
+			e = fmt.Errorf("serving - user does not have the rights to access the devices: %w", ErrSourceAccessDenied)
 			return access, e
 		}
 		break
@@ -461,7 +496,7 @@ func (f *Serving) userHasSourceAccess(req lib.ServingRequest, token string) (acc
 			return access, e
 		}
 		if !hasAccess {
-			e = errors.New("serving - user does not have the rights to access the pipeline")
+			e = fmt.Errorf("serving - user does not have the rights to access the pipeline: %w", ErrSourceAccessDenied)
 			return access, e
 		}
 		break
@@ -472,12 +507,12 @@ func (f *Serving) userHasSourceAccess(req lib.ServingRequest, token string) (acc
 			return access, e
 		}
 		if !hasAccess {
-			e = errors.New("serving - user does not have the rights to access the import")
+			e = fmt.Errorf("serving - user does not have the rights to access the import: %w", ErrSourceAccessDenied)
 			return access, e
 		}
 		break
 	default:
-		return false, err
+		return false, &InputError{Field: "FilterType", Message: "The field 'FilterType' must be one of: deviceId, operatorId, import_id"}
 	}
 	access = true
 	return

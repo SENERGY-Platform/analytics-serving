@@ -40,6 +40,7 @@ import (
 // @Param request body lib.ServingRequest true "request data"
 // @Success	201 {object} lib.Instance "export"
 // @Failure	400 {object} map[string]map[string][]string "error data"
+// @Failure	403 {string} string "no access to the source"
 // @Failure	500
 // @Router /instance [post]
 func postNewServingInstance(serv *service.Serving) (string, string, gin.HandlerFunc) {
@@ -60,6 +61,9 @@ func postNewServingInstance(serv *service.Serving) (string, string, gin.HandlerF
 		instance, err := serv.CreateInstance(request, c.GetString(UserIdKey), c.GetHeader("Authorization"))
 		if err != nil {
 			util.Logger.Error("could not create serving instance", "error", err)
+			if respondInstanceError(c, []error{err}) {
+				return
+			}
 			_ = c.Error(errors.New(MessageSomethingWrong))
 			return
 		}
@@ -78,6 +82,7 @@ func postNewServingInstance(serv *service.Serving) (string, string, gin.HandlerF
 // @Param request body lib.ServingRequest true "request data"
 // @Success	200 {object} lib.Instance "export"
 // @Failure	400 {object} map[string]map[string][]string "error data"
+// @Failure	403 {string} string "no access to the source"
 // @Failure	500
 // @Router /instance/{id} [put]
 func putNewServingInstance(serv *service.Serving) (string, string, gin.HandlerFunc) {
@@ -98,6 +103,9 @@ func putNewServingInstance(serv *service.Serving) (string, string, gin.HandlerFu
 		instance, errs := serv.UpdateInstance(c.Param("id"), c.GetString(UserIdKey), request, c.GetHeader("Authorization"))
 		if len(errs) > 0 {
 			util.Logger.Error("could not update serving instance", "error", errs)
+			if respondInstanceError(c, errs) {
+				return
+			}
 			_ = c.Error(errors.New(MessageSomethingWrong))
 			return
 		}
@@ -485,6 +493,41 @@ func respondQueryError(c *gin.Context, errs []error) bool {
 		}
 	}
 	return false
+}
+
+// respondInstanceError answers input errors of a create or update with 400 in the shape of the body validation
+// errors and a denied source with 403. It reports whether it answered.
+func respondInstanceError(c *gin.Context, errs []error) bool {
+	fields := map[string][]string{}
+	for _, err := range errs {
+		collectInputErrors(err, fields)
+	}
+	if len(fields) > 0 {
+		c.JSON(http.StatusBadRequest, map[string]map[string][]string{"validationErrors": fields})
+		return true
+	}
+	for _, err := range errs {
+		if errors.Is(err, service.ErrSourceAccessDenied) {
+			c.Status(http.StatusForbidden)
+			_ = c.Error(errors.New(MessageSourceAccessDenied))
+			return true
+		}
+	}
+	return false
+}
+
+// collectInputErrors adds every service.InputError in the tree of err; errors.As would stop at the first one.
+func collectInputErrors(err error, fields map[string][]string) {
+	switch e := err.(type) {
+	case *service.InputError:
+		fields[e.Field] = append(fields[e.Field], e.Message)
+	case interface{ Unwrap() []error }:
+		for _, inner := range e.Unwrap() {
+			collectInputErrors(inner, fields)
+		}
+	case interface{ Unwrap() error }:
+		collectInputErrors(e.Unwrap(), fields)
+	}
 }
 
 func getHealthCheckH(_ *service.Serving) (string, string, gin.HandlerFunc) {

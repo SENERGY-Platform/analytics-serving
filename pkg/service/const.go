@@ -21,6 +21,10 @@ const (
 	ExportInstancePermissionsTopic = "export-instances"
 )
 
+// exportDatabaseTypeTimescaleDB equals ew_api.TimescaleDB, which cannot be imported here because ew_api imports
+// this package.
+const exportDatabaseTypeTimescaleDB = "timescaledb"
+
 // maxParallelDeletes bounds the concurrent deletes of one bulk request, each of which queries the database and
 // calls the export worker and permissions-v2.
 const maxParallelDeletes = 8

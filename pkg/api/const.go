@@ -27,6 +27,7 @@ const (
 )
 
 const (
-	MessageSomethingWrong = "something went wrong"
-	MessageParseError     = "failed to parse request"
+	MessageSomethingWrong     = "something went wrong"
+	MessageParseError         = "failed to parse request"
+	MessageSourceAccessDenied = "no access to the source of the export"
 )

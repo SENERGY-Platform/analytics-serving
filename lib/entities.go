@@ -20,29 +20,31 @@ type Response struct {
 	Message string `json:"message,omitempty" validate:"required"`
 }
 
+// ServingRequest limits every stored string to its varchar(255) column; max counts runes, as PostgreSQL counts
+// characters.
 type ServingRequest struct {
-	FilterType       string                `json:"FilterType,omitempty" validate:"required"`
-	Filter           string                `json:"Filter,omitempty" validate:"required"`
-	Name             string                `json:"Name,omitempty" validate:"required"`
-	EntityName       string                `json:"EntityName,omitempty" validate:"required"`
-	ServiceName      string                `json:"ServiceName,omitempty" validate:"required"`
-	Description      string                `json:"Description,omitempty"`
-	Topic            string                `json:"Topic,omitempty" validate:"required"`
-	TimePath         string                `json:"TimePath,omitempty"`
-	TimePrecision    string                `json:"TimePrecision,omitempty"`
+	FilterType       string                `json:"FilterType,omitempty" validate:"required,oneof=deviceId operatorId import_id"`
+	Filter           string                `json:"Filter,omitempty" validate:"required,max=255"`
+	Name             string                `json:"Name,omitempty" validate:"required,max=255"`
+	EntityName       string                `json:"EntityName,omitempty" validate:"required,max=255"`
+	ServiceName      string                `json:"ServiceName,omitempty" validate:"required,max=255"`
+	Description      string                `json:"Description,omitempty" validate:"max=255"`
+	Topic            string                `json:"Topic,omitempty" validate:"required,max=255"`
+	TimePath         string                `json:"TimePath,omitempty" validate:"max=255"`
+	TimePrecision    string                `json:"TimePrecision,omitempty" validate:"max=255"`
 	Generated        bool                  `json:"generated,omitempty"`
-	Offset           string                `json:"Offset,omitempty" validate:"required"`
+	Offset           string                `json:"Offset,omitempty" validate:"required,max=255"`
 	ForceUpdate      bool                  `json:"ForceUpdate,omitempty"`
-	Values           []ServingRequestValue `json:"Values,omitempty"`
-	ExportDatabaseID string                `json:"ExportDatabaseID,omitempty"`
-	TimestampFormat  string                `json:"TimestampFormat,omitempty"`
+	Values           []ServingRequestValue `json:"Values,omitempty" validate:"dive"`
+	ExportDatabaseID string                `json:"ExportDatabaseID,omitempty" validate:"max=255"`
+	TimestampFormat  string                `json:"TimestampFormat,omitempty" validate:"max=255"`
 	TimestampUnique  bool                  `json:"TimestampUnique,omitempty"`
 }
 
 type ServingRequestValue struct {
-	Name string `json:"Name,omitempty"`
-	Type string `json:"Type,omitempty"`
-	Path string `json:"Path,omitempty"`
+	Name string `json:"Name,omitempty" validate:"max=255"`
+	Type string `json:"Type,omitempty" validate:"max=255"`
+	Path string `json:"Path,omitempty" validate:"max=255"`
 	Tag  bool   `json:"Tag"`
 }
 
