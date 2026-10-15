@@ -2,6 +2,7 @@ package api_doc
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -28,7 +29,8 @@ func PublishAsyncapiDoc(docksProviderUrl string) {
 	}(file)
 	ctx, cf := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cf()
-	err = adpClient.AsyncapiPutDocFromReader(ctx, "github_com_SENERGY-Platform_analytics-serving", file)
+	// net/http closes an io.ReadCloser body itself; hide Close so the deferred one is the only one
+	err = adpClient.AsyncapiPutDocFromReader(ctx, "github_com_SENERGY-Platform_analytics-serving", struct{ io.Reader }{file})
 	if err != nil {
 		util.Logger.Error("error AsyncapiPutDocFromReader", "error", err)
 		return
